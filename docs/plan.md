@@ -200,4 +200,21 @@ Con la cuenta y el hogar "Casa" ya creados en producción, el usuario pidió tre
 
 Verificado con `tsc --noEmit` y `npm run lint` limpios, y con conteos reales post-carga contra la base (140/140/140/140 en productos, movimientos, vencimientos activos y productos con stock > 0).
 
+---
+
+## Pasada de rendimiento (a pedido del usuario, "la app se siente lenta")
+
+El usuario pidió precarga, caché y una tarjeta de "cargando" para la primera apertura. Antes de tocar código se leyó `node_modules/next/dist/docs/` (obligatorio por `AGENTS.md`: esta versión de Next, la 16.3.5, cambia bastante el modelo de cache respecto a versiones anteriores) para no aplicar una API de una versión distinta a la instalada.
+
+**Hallazgo concreto (HECHO, verificado leyendo el código, no un supuesto)**: `getActiveHousehold()` se llama dos veces por navegación — una en `(app)/layout.tsx` y otra de nuevo en cada `page.tsx` (Lista, Stock, Comprar, Reportes, Ajustes) — y no estaba envuelta en `cache()` de React, así que cada visita pagaba el trabajo de auth + consulta a `household_members` **dos veces** en vez de una. Es exactamente el caso que la propia documentación de Next describe como "Deduplicating requests". Se corrigió envolviendo la función con `cache()` (`src/lib/household.ts`) — mismo resultado, la mitad de las idas y vueltas por navegación.
+
+**Tarjeta de "cargando"**: se agregó `loading.tsx` a cada pestaña (Lista, Stock, Comprar, Reportes, Ajustes) con un esqueleto (`ListSkeleton` en `src/components/loading.tsx`) que imita la forma real de cada lista — Next.js lo muestra automáticamente vía Suspense mientras la página server-side todavía está pidiendo sus datos, así que cambiar de pestaña se siente instantáneo aunque la consulta tarde lo mismo que antes.
+
+**Lo que se descartó y por qué (para no aplicar "más caché" a ciegas)**:
+- Un `loading.tsx` a nivel del layout completo (`(app)/loading.tsx`) se armó primero y después se sacó: la documentación aclara explícitamente que si el layout hace `await` de datos sin envolverlo en Suspense (que es nuestro caso, `getActiveHousehold()` corre directo en `(app)/layout.tsx`), **la navegación queda bloqueada hasta que el layout termina y ningún `loading.tsx` de ese nivel llega a mostrarse** — hubiera sido código que aparenta arreglar algo sin hacerlo. Los `loading.tsx` por pestaña sí funcionan porque el layout no se vuelve a ejecutar al cambiar de tab (solo la primera vez que se entra a la app después del login).
+- `staleTimes` (cache experimental del router del lado del cliente): permitiría reusar una pestaña ya visitada sin volver a pedirle nada al servidor por un rato — pero eso significa que si alguien del hogar registra una compra o ajusta stock, la otra persona podría ver datos viejos en Stock/Comprar por esos segundos. Justo lo contrario de lo que esta app necesita (datos compartidos y al día entre el hogar). Se decidió no activarlo.
+- Cachear la consulta de catálogo (productos/categorías) con `unstable_cache`: la tabla es chica (140 productos, ya indexada por `household_id` desde Fase 1) y la ganancia real es marginal, mientras que mantenerla cacheada correctamente requeriría invalidarla a mano en cada lugar que crea/edita un producto (Ajustes, Comprar, Lista, el futuro CRUD de Stock) — más riesgo de bugs de "caché vieja" que beneficio real.
+
+Verificado con `tsc --noEmit`, `npm run lint` y `npm run build` (con `rm -rf .next` antes) limpios; el build confirma que las 5 rutas siguen dinámicas (`ƒ`) como corresponde a datos por-usuario con RLS.
+
 No se armó splash screen específico para iOS (`apple-touch-startup-image` por tamaño de dispositivo) — es papeleo de bajo impacto para un hogar de 2 personas; se puede sumar más adelante si se nota falta.
