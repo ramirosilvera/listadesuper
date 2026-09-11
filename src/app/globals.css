@@ -19,8 +19,18 @@
   }
 }
 
+html {
+  /* Evita el rebote de doble scroll (html + body) al llegar al final de
+     la pantalla en iOS/Android, que rompe la sensación de app nativa. */
+  overscroll-behavior-y: none;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  /* Saca el resaltado gris que Safari/Chrome mobile muestran al tocar un
+     elemento (botones, ítems de la lista) — en una PWA sin ese flash se
+     siente mucho más nativo. Los estados :active propios de cada
+     componente siguen funcionando igual. */
+  -webkit-tap-highlight-color: transparent;
 }

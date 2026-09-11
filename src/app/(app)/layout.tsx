@@ -14,7 +14,13 @@ export default async function AppLayout({
 
   return (
     <div className="flex min-h-full flex-1 flex-col">
-      <header className="border-b border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-950">
+      <header
+        className="sticky top-0 z-20 border-b border-zinc-200 bg-white/95 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95"
+        style={{
+          paddingLeft: "max(1rem, env(safe-area-inset-left))",
+          paddingRight: "max(1rem, env(safe-area-inset-right))",
+        }}
+      >
         <div className="mx-auto flex max-w-2xl items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#16A34A] text-white">
@@ -44,7 +50,13 @@ export default async function AppLayout({
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-4">
+      <main
+        className="mx-auto w-full max-w-2xl flex-1 py-4"
+        style={{
+          paddingLeft: "max(1rem, env(safe-area-inset-left))",
+          paddingRight: "max(1rem, env(safe-area-inset-right))",
+        }}
+      >
         {children}
       </main>
 

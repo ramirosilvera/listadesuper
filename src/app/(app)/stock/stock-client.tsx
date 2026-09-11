@@ -115,14 +115,16 @@ export function StockClient({
                   <span className="flex-1 text-sm text-zinc-900 dark:text-zinc-50">
                     {p.name}
                   </span>
-                  <div className="flex items-center gap-1.5 text-sm text-zinc-600 dark:text-zinc-400">
+                  <div className="flex items-center text-sm text-zinc-600 dark:text-zinc-400">
                     <button
                       type="button"
                       onClick={() => adjust(p, -1)}
-                      className="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800"
+                      className="flex h-9 w-9 shrink-0 select-none items-center justify-center rounded-full active:bg-zinc-200 dark:active:bg-zinc-700"
                       aria-label="Restar"
                     >
-                      −
+                      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
+                        −
+                      </span>
                     </button>
                     <span className="w-10 text-center tabular-nums">
                       {p.quantity_on_hand}
@@ -133,10 +135,12 @@ export function StockClient({
                     <button
                       type="button"
                       onClick={() => adjust(p, 1)}
-                      className="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800"
+                      className="flex h-9 w-9 shrink-0 select-none items-center justify-center rounded-full active:bg-zinc-200 dark:active:bg-zinc-700"
                       aria-label="Sumar"
                     >
-                      +
+                      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
+                        +
+                      </span>
                     </button>
                   </div>
                 </li>

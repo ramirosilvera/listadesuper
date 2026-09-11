@@ -13,13 +13,13 @@ export function Button({
   return (
     <button
       className={cx(
-        "inline-flex min-h-11 items-center justify-center rounded-full px-5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+        "inline-flex min-h-11 touch-manipulation items-center justify-center rounded-full px-5 text-sm font-medium transition-colors select-none disabled:cursor-not-allowed disabled:opacity-50",
         variant === "primary" &&
-          "bg-[#16A34A] text-white hover:bg-[#15803D]",
+          "bg-[#16A34A] text-white hover:bg-[#15803D] active:bg-[#15803D]",
         variant === "secondary" &&
-          "bg-zinc-200 text-zinc-900 hover:bg-zinc-300 dark:bg-zinc-800 dark:text-zinc-50 dark:hover:bg-zinc-700",
+          "bg-zinc-200 text-zinc-900 hover:bg-zinc-300 active:bg-zinc-300 dark:bg-zinc-800 dark:text-zinc-50 dark:hover:bg-zinc-700 dark:active:bg-zinc-700",
         variant === "ghost" &&
-          "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900",
+          "text-zinc-600 hover:bg-zinc-100 active:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:active:bg-zinc-900",
         className,
       )}
       {...props}

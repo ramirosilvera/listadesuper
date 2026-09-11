@@ -245,13 +245,16 @@ export function ComprarClient({
                 type="number"
                 min={1}
                 step="1"
+                inputMode="numeric"
                 value={row.quantity}
                 onChange={(e) =>
                   updateRow(row.key, {
                     quantity: Math.max(1, Number(e.target.value) || 1),
                   })
                 }
-                className="h-9 w-16 rounded-lg border border-zinc-300 px-2 text-center text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                // text-base (16px), no text-sm: un input mas chico hace
+                // que iOS Safari haga auto-zoom al tocarlo.
+                className="h-11 w-16 rounded-lg border border-zinc-300 px-2 text-center text-base dark:border-zinc-700 dark:bg-zinc-900"
                 aria-label="Cantidad"
               />
               <span className="text-xs text-zinc-400">{row.unit_label}</span>
@@ -261,14 +264,14 @@ export function ComprarClient({
                 placeholder="$ precio unit."
                 value={row.unit_price}
                 onChange={(e) => updateRow(row.key, { unit_price: e.target.value })}
-                className="h-9 w-28 rounded-lg border border-zinc-300 px-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                className="h-11 w-28 rounded-lg border border-zinc-300 px-2 text-base dark:border-zinc-700 dark:bg-zinc-900"
                 aria-label="Precio unitario"
               />
               <button
                 type="button"
                 onClick={() => removeRow(row.key)}
                 aria-label="Quitar"
-                className="text-zinc-400 hover:text-red-500"
+                className="flex h-11 w-11 shrink-0 select-none items-center justify-center text-zinc-400 active:text-red-500"
               >
                 <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
                   <path d="M18 6 6 18M6 6l12 12" />
@@ -287,7 +290,16 @@ export function ComprarClient({
 
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
-      <div className="fixed inset-x-0 bottom-16 z-10 mx-auto max-w-2xl px-4">
+      {/*
+        bottom: no se usa bottom-16 de Tailwind (fijo) porque la altura
+        real del nav de abajo varía con env(safe-area-inset-bottom) según
+        el dispositivo (los iPhone con home indicator suman ~34px) — con
+        un valor fijo esta barra queda tapada por el nav en esos equipos.
+      */}
+      <div
+        className="fixed inset-x-0 z-10 mx-auto max-w-2xl px-4"
+        style={{ bottom: "calc(4rem + env(safe-area-inset-bottom))" }}
+      >
         <Button
           onClick={handleSubmit}
           disabled={submitting || rows.length === 0}

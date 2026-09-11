@@ -53,14 +53,14 @@ export function OnboardingForm() {
         <button
           type="button"
           onClick={() => setMode("create")}
-          className={`flex-1 rounded-full py-2 transition-colors ${mode === "create" ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50" : "text-zinc-500"}`}
+          className={`flex-1 select-none touch-manipulation rounded-full py-2 transition-colors ${mode === "create" ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50" : "text-zinc-500"}`}
         >
           Crear hogar
         </button>
         <button
           type="button"
           onClick={() => setMode("join")}
-          className={`flex-1 rounded-full py-2 transition-colors ${mode === "join" ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50" : "text-zinc-500"}`}
+          className={`flex-1 select-none touch-manipulation rounded-full py-2 transition-colors ${mode === "join" ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50" : "text-zinc-500"}`}
         >
           Unirme con código
         </button>

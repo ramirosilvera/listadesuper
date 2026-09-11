@@ -9,7 +9,13 @@ export default async function OnboardingPage() {
   if (household) redirect("/lista");
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-6 bg-zinc-50 px-6 py-16 text-center dark:bg-black">
+    <div
+      className="flex flex-1 flex-col items-center justify-center gap-6 bg-zinc-50 py-[max(4rem,env(safe-area-inset-top))] text-center dark:bg-black"
+      style={{
+        paddingLeft: "max(1.5rem, env(safe-area-inset-left))",
+        paddingRight: "max(1.5rem, env(safe-area-inset-right))",
+      }}
+    >
       <div>
         <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">
           Armemos tu hogar

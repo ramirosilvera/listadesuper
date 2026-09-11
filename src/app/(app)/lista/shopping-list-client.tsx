@@ -271,39 +271,45 @@ export function ShoppingListClient({
             {group.items.map((item) => (
               <li
                 key={item.id}
-                className="flex items-center gap-3 border-b border-zinc-100 bg-white px-3 py-2.5 last:border-b-0 dark:border-zinc-900 dark:bg-zinc-950"
+                className="flex items-center gap-1 border-b border-zinc-100 bg-white pr-1 pl-1 last:border-b-0 dark:border-zinc-900 dark:bg-zinc-950"
               >
                 <button
                   type="button"
                   onClick={() => toggleChecked(item)}
                   aria-label={item.checked ? "Desmarcar" : "Marcar como conseguido"}
-                  className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 ${
-                    item.checked
-                      ? "border-[#16A34A] bg-[#16A34A] text-white"
-                      : "border-zinc-300 dark:border-zinc-700"
-                  }`}
+                  className="flex h-11 w-11 shrink-0 select-none items-center justify-center"
                 >
-                  {item.checked && (
-                    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M20 6 9 17l-5-5" />
-                    </svg>
-                  )}
+                  <span
+                    className={`flex h-6 w-6 items-center justify-center rounded-full border-2 ${
+                      item.checked
+                        ? "border-[#16A34A] bg-[#16A34A] text-white"
+                        : "border-zinc-300 dark:border-zinc-700"
+                    }`}
+                  >
+                    {item.checked && (
+                      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M20 6 9 17l-5-5" />
+                      </svg>
+                    )}
+                  </span>
                 </button>
 
                 <span
-                  className={`flex-1 text-sm ${item.checked ? "text-zinc-400 line-through" : "text-zinc-900 dark:text-zinc-50"}`}
+                  className={`flex-1 py-2.5 text-sm ${item.checked ? "text-zinc-400 line-through" : "text-zinc-900 dark:text-zinc-50"}`}
                 >
                   {item.products?.name ?? "Producto"}
                 </span>
 
-                <div className="flex items-center gap-1.5 text-sm text-zinc-600 dark:text-zinc-400">
+                <div className="flex items-center text-sm text-zinc-600 dark:text-zinc-400">
                   <button
                     type="button"
                     onClick={() => changeQuantity(item, -1)}
-                    className="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800"
+                    className="flex h-9 w-9 shrink-0 select-none items-center justify-center rounded-full active:bg-zinc-200 dark:active:bg-zinc-700"
                     aria-label="Restar"
                   >
-                    −
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
+                      −
+                    </span>
                   </button>
                   <span className="w-8 text-center tabular-nums">
                     {item.quantity}
@@ -314,10 +320,12 @@ export function ShoppingListClient({
                   <button
                     type="button"
                     onClick={() => changeQuantity(item, 1)}
-                    className="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800"
+                    className="flex h-9 w-9 shrink-0 select-none items-center justify-center rounded-full active:bg-zinc-200 dark:active:bg-zinc-700"
                     aria-label="Sumar"
                   >
-                    +
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
+                      +
+                    </span>
                   </button>
                 </div>
 
@@ -325,7 +333,7 @@ export function ShoppingListClient({
                   type="button"
                   onClick={() => removeItem(item)}
                   aria-label="Quitar de la lista"
-                  className="text-zinc-400 hover:text-red-500"
+                  className="flex h-11 w-11 shrink-0 select-none items-center justify-center text-zinc-400 active:text-red-500"
                 >
                   <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
                     <path d="M18 6 6 18M6 6l12 12" />
@@ -338,7 +346,13 @@ export function ShoppingListClient({
       ))}
 
       {checkedCount > 0 && (
-        <div className="sticky bottom-16 z-10">
+        // No es bottom-16 fijo: la altura real del nav de abajo varía con
+        // env(safe-area-inset-bottom) (iPhone con home indicator suman
+        // ~34px) — con un valor fijo este botón queda tapado por el nav.
+        <div
+          className="sticky z-10"
+          style={{ bottom: "calc(4rem + env(safe-area-inset-bottom))" }}
+        >
           <Link href="/comprar">
             <Button className="w-full shadow-lg">
               Confirmar compra ({checkedCount})

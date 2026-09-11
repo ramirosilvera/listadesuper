@@ -14,8 +14,20 @@ export function NavBar() {
   const pathname = usePathname();
 
   return (
-    <nav className="sticky bottom-0 border-t border-zinc-200 bg-white/95 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95">
-      <div className="mx-auto flex max-w-2xl">
+    <nav
+      className="sticky bottom-0 z-20 border-t border-zinc-200 bg-white/95 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95"
+      style={{
+        paddingLeft: "env(safe-area-inset-left)",
+        paddingRight: "env(safe-area-inset-right)",
+      }}
+    >
+      {/*
+        Altura fija (h-16 = 4rem) a propósito, no "auto": las barras de
+        acción flotantes (ver NAV_CONTENT_HEIGHT en lista/comprar) necesitan
+        saber cuánto mide esto para no quedar tapadas ni flotar con un
+        hueco de más arriba de este nav.
+      */}
+      <div className="mx-auto flex h-16 max-w-2xl select-none">
         {TABS.map((tab) => {
           const active = pathname?.startsWith(tab.href);
           const Icon = tab.icon;
@@ -23,7 +35,7 @@ export function NavBar() {
             <Link
               key={tab.href}
               href={tab.href}
-              className={`flex flex-1 flex-col items-center gap-1 py-2 text-xs font-medium ${
+              className={`flex flex-1 flex-col items-center justify-center gap-1 text-xs font-medium ${
                 active
                   ? "text-[#16A34A]"
                   : "text-zinc-500 dark:text-zinc-400"

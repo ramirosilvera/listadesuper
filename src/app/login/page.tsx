@@ -52,7 +52,13 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center bg-zinc-50 px-6 py-16 dark:bg-black">
+    <div
+      className="flex flex-1 flex-col items-center justify-center bg-zinc-50 py-[max(4rem,env(safe-area-inset-top))] dark:bg-black"
+      style={{
+        paddingLeft: "max(1.5rem, env(safe-area-inset-left))",
+        paddingRight: "max(1.5rem, env(safe-area-inset-right))",
+      }}
+    >
       <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#16A34A] text-white">
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -82,14 +88,14 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={() => setMode("login")}
-            className={`flex-1 rounded-full py-2 transition-colors ${mode === "login" ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50" : "text-zinc-500"}`}
+            className={`flex-1 select-none touch-manipulation rounded-full py-2 transition-colors ${mode === "login" ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50" : "text-zinc-500"}`}
           >
             Entrar
           </button>
           <button
             type="button"
             onClick={() => setMode("signup")}
-            className={`flex-1 rounded-full py-2 transition-colors ${mode === "signup" ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50" : "text-zinc-500"}`}
+            className={`flex-1 select-none touch-manipulation rounded-full py-2 transition-colors ${mode === "signup" ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50" : "text-zinc-500"}`}
           >
             Crear cuenta
           </button>
