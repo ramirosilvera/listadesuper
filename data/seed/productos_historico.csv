@@ -1,0 +1,142 @@
+nombre,categoria,unidad_referencia,vida_util_estimada_dias,frecuencia_historica,a_confirmar,notas
+Manteca,"Lácteos, huevos y fiambres",unidad,20,20,no,
+Leche,"Lácteos, huevos y fiambres",L,90,13,no,"Se asume larga vida por ser lo habitual en súper; verificar si alguna compra era leche fresca"
+Huevos,"Lácteos, huevos y fiambres",docena,21,12,no,"Suma variantes ""Huevos""/""Huevo"""
+Queso crema,"Lácteos, huevos y fiambres",pote,30,6,no,
+Queso cremoso,"Lácteos, huevos y fiambres",kg,20,3,no,
+Queso para rallar,"Lácteos, huevos y fiambres",unidad,60,3,no,"Pieza para rallar en casa"
+Queso rallado,"Lácteos, huevos y fiambres",paquete,30,1,no,"Ya viene rallado (""Queso rayado"")"
+Queso duro,"Lácteos, huevos y fiambres",pieza,60,1,no,
+Queso (sin especificar),"Lácteos, huevos y fiambres",unidad,30,2,si,"No se indicaba el tipo; a confirmar cuál es el habitual"
+Yogur,"Lácteos, huevos y fiambres",unidad,15,1,no,
+Crema (de leche),"Lácteos, huevos y fiambres",pote,10,1,si,"Podría ser crema de leche (cocina) o crema corporal; se asumió crema de leche por contexto"
+Leche deslactosada,"Lácteos, huevos y fiambres",L,90,1,no,
+Leche larga vida,"Lácteos, huevos y fiambres",L,90,1,no,
+Pan,Panadería,unidad,3,12,no,
+Tarta (masa/pascualina),Panadería,unidad,3,2,no,
+Masa para tarta,Panadería,paquete,90,2,no,
+Masa para empanadas,Panadería,paquete,90,1,no,
+Arroz,Almacén,kg,365,8,no,
+Azúcar,Almacén,kg,730,7,no,
+Fideos (sin especificar),Almacén,paquete,365,3,no,
+Fideos sopa,Almacén,paquete,365,3,no,
+Fideos largos,Almacén,paquete,365,2,no,
+Fideos cortos,Almacén,paquete,365,1,no,
+Espirales,Almacén,paquete,365,1,si,"Ambiguo: podría ser fideos tipo espiral (pasta) o espiral repelente de mosquitos"
+Rapiditas (fideos instantáneos),Almacén,unidad,180,1,no,
+Harina,Almacén,kg,180,2,no,
+Harina leudante,Almacén,kg,180,1,no,
+Sal,Almacén,kg,730,2,no,
+Sal fina,Almacén,kg,730,1,no,
+Sal parrillera,Almacén,kg,730,1,no,
+Aceite de oliva,Almacén,L,365,5,no,"Suma ""Aceite de oliva""/""Aceite oliva cocinar"""
+Aceite de girasol,Almacén,L,365,1,no,
+Aceite (sin especificar),Almacén,L,365,2,si,"Suma ""Aceite""/""Óleo""; confirmar si es de oliva o girasol"
+Pan rallado,Almacén,paquete,180,2,no,
+Dulce de leche,Almacén,pote,90,3,no,
+Mermelada,Almacén,frasco,180,6,no,
+Miel,Almacén,frasco,365,2,no,
+Mayonesa,Almacén,frasco,90,2,no,
+Ketchup,Almacén,botella,180,1,no,
+Salsa de soja,Almacén,botella,365,2,no,
+Vinagre,Almacén,botella,730,1,no,
+Reducción de aceto balsámico,Almacén,botella,365,1,no,
+Levadura,Almacén,paquete,180,3,no,
+Polvo de hornear,Almacén,lata,365,1,no,
+Bicarbonato de sodio,Almacén,paquete,730,1,no,
+Maicena,Almacén,paquete,365,1,no,
+Ají molido,Almacén,frasco,365,1,no,
+Pimienta,Almacén,frasco,730,1,no,
+Condimento provenzal,Almacén,frasco,365,1,no,
+Sibarita (condimento),Almacén,frasco,365,2,no,
+Salsa/condimento barbacoa,Almacén,botella,180,1,no,
+Canela,Almacén,frasco,730,1,no,
+Esencia de vainilla,Almacén,frasco,365,1,no,
+Fritolín (grasa para freír),Almacén,unidad,180,3,no,
+Tomate en lata,Almacén,lata,730,1,no,
+Concentrado/puré de tomate,Almacén,sachet,365,1,no,
+Choclo en lata,Almacén,lata,730,1,no,
+Atún en lata,Almacén,lata,730,1,no,
+Lentejas,Almacén,paquete,365,1,no,
+Avena,Almacén,paquete,365,2,no,
+Galletitas de agua,Almacén,paquete,90,1,no,
+Alfajores,Almacén,unidad,60,1,no,
+Coco rallado,Almacén,paquete,180,1,no,
+Coco,Almacén,unidad,20,1,si,"Ambiguo: coco rallado (almacén) o coco fresco (verdulería)"
+Frutos secos (mix),Almacén,paquete,90,1,no,
+Maní,Almacén,paquete,180,1,no,
+Nueces,Almacén,paquete,180,1,no,
+Pasta de maní (manteca de maní),Almacén,frasco,180,2,no,
+Polenta,Almacén,paquete,365,1,no,
+Ajo,Verdulería,unidad,20,2,no,
+Jengibre,Verdulería,unidad,20,1,no,
+Morrón,Verdulería,unidad,10,1,no,
+Yerba mate,Bebidas e infusiones,kg,365,3,no,
+Té La Virginia sabor naranja,Bebidas e infusiones,caja,365,1,no,
+Vermut,Bebidas e infusiones,botella,365,1,no,
+Agua mineral (Glaciar),Bebidas e infusiones,bidón,365,1,no,
+Detergente (lavavajillas),Limpieza del hogar,unidad,90,16,no,"Suma ""Detergente"" + ""Repuesto detergente"" (recarga)"
+Lavandina,Limpieza del hogar,L,180,12,no,
+Blem pisos,Limpieza del hogar,L,90,13,no,"Suma ""Blem""/""Blem pisos""/""Echo""/""Echo (Blem)""; ""Echo"" es el alias que usan para Blem"
+Cif crema,Limpieza del hogar,pote,120,3,no,
+Cif pisos,Limpieza del hogar,L,90,3,no,"Suma ""Cif pisos""/""Ciff pisos"""
+Cif (sin especificar),Limpieza del hogar,unidad,90,3,si,"No se indicaba si era Cif crema o Cif pisos"
+Antigrasa (desengrasante),Limpieza del hogar,unidad,90,6,no,"Suma ""Antigrasa""/""Rociador antigrasa""/""Mister músculo antigrasa naranja"""
+Limpiador de pisos (genérico),Limpieza del hogar,L,90,3,no,"Sin marca específica"
+Procenex piso,Limpieza del hogar,L,90,2,no,"Suma ""Procenex""/""Procenez piso"" (typo)"
+Desinfectante de piso,Limpieza del hogar,L,120,1,no,
+Lysoform,Limpieza del hogar,botella,180,1,no,
+Poett,Limpieza del hogar,botella,90,1,no,"Se asume typo de ""Poet"""
+Limpiavidrios,Limpieza del hogar,unidad,120,3,no,
+Suavizante para ropa,Limpieza del hogar,L,90,2,no,
+Jabón/detergente para ropa,Limpieza del hogar,unidad,60,2,no,
+Detergente para ropa en polvo (Skip),Limpieza del hogar,caja,180,1,no,
+Vanish (quitamanchas),Limpieza del hogar,botella,180,1,no,
+Esponja de cocina,Limpieza del hogar,unidad,30,3,no,
+Virulana (esponja de acero),Limpieza del hogar,paquete,180,2,no,"Suma ""Virulana""/""Vierulana (esponjita)"""
+Trapos de piso,Limpieza del hogar,unidad,180,3,no,
+Lustramuebles,Limpieza del hogar,aerosol,180,1,no,
+Pastillas para lavavajillas (máquina),Limpieza del hogar,caja,180,2,no,
+Aceite para pisos de madera,Limpieza del hogar,botella,180,2,si,"Interpretación tentativa de ""Aceite de oliva suelo""/""Aceite suelo""; podría ser un error de tipeo mezclando dos ítems distintos"
+Jabón (sin especificar),Higiene y cuidado personal,unidad,90,5,si,"No se indicaba si era jabón de tocador, de ropa o para platos"
+Jabón de manos,Higiene y cuidado personal,botella,120,3,no,
+Jabón líquido de manos,Higiene y cuidado personal,botella,120,3,no,"Incluye una compra marca ""Oli"""
+Pasta dental,Higiene y cuidado personal,pomo,60,4,no,
+Cepillo de dientes,Higiene y cuidado personal,unidad,90,2,no,
+Hilo dental,Higiene y cuidado personal,unidad,180,1,no,
+Shampoo,Higiene y cuidado personal,frasco,90,3,no,
+Crema de enjuague (acondicionador),Higiene y cuidado personal,frasco,90,4,no,
+Shampoo y crema de enjuague (envase chico),Higiene y cuidado personal,unidad,90,1,si,"Podría ser para bebé o para viaje"
+Desodorante,Higiene y cuidado personal,unidad,90,2,no,
+Desodorante (Rami),Higiene y cuidado personal,unidad,90,2,no,
+Algodón,Higiene y cuidado personal,paquete,180,7,no,
+Pañuelos descartables,Higiene y cuidado personal,caja,90,2,no,"Suma ""Pañuelitos""/""Carilinas"" (marca)"
+Pañales Pampers talle G,Bebé,paquete,90,1,no,
+Pañales (sin especificar),Bebé,paquete,90,1,si,"Marca y talle no indicados"
+Toallitas húmedas para bebé,Bebé,paquete,60,1,no,
+Jabón de ropa para bebé (hipoalergénico),Bebé,botella,90,2,no,
+Jabón para bebé (piel/baño),Bebé,unidad,90,1,no,
+Rollo de cocina (papel toalla),Descartables y hogar,unidad,60,8,no,
+Papel higiénico,Descartables y hogar,paquete,60,5,no,"Incluye compra marca Confort"
+Bolsas de basura,Descartables y hogar,rollo,60,9,no,"Suma variantes y ""Bolsas"" sin especificar tamaño"
+Bolsas de residuos tipo consorcio (reforzadas),Descartables y hogar,rollo,60,1,no,
+Bolsas para horno,Descartables y hogar,caja,180,3,no,"Suma ""Bolsas para horno""/""Bolsas horno""/""Brolsas horno"" (typo)"
+Papel manteca,Descartables y hogar,rollo,180,2,no,
+Papel aluminio,Descartables y hogar,rollo,365,1,no,
+Papel film,Descartables y hogar,rollo,365,1,no,
+Fósforos,Descartables y hogar,caja,365,2,no,
+Encendedor,Descartables y hogar,unidad,365,1,no,
+Pilas AAA,Descartables y hogar,blister,730,1,no,
+Separadores de freezer,Descartables y hogar,paquete,365,1,no,
+Antihumedad (absorbe humedad),Descartables y hogar,unidad,90,1,no,
+Raid (sin especificar),Insecticidas y repelentes,aerosol,180,1,si,"No se indicaba el formato (pulgas, casa y jardín, líquido)"
+Raid pulgas,Insecticidas y repelentes,aerosol,180,1,no,
+Raid casa y jardín,Insecticidas y repelentes,aerosol,180,1,no,
+Raid líquido (recarga aparato),Insecticidas y repelentes,recarga,90,2,no,"Suma ""Raid líquido""/""Raid liquidó"" (typo)"
+Off (repelente corporal),Insecticidas y repelentes,aerosol,180,1,no,
+Fuyi (sin especificar),Insecticidas y repelentes,unidad,90,1,si,"No se indicaba si era líquido o pastillas"
+Fuyi líquido (recarga aparato),Insecticidas y repelentes,recarga,90,1,no,
+Fuyi pastillas (recarga aparato),Insecticidas y repelentes,recarga,180,1,no,
+Aparato eléctrico repelente (para pastillas/líquido),Insecticidas y repelentes,unidad,730,1,si,"Es un bien durable (el dispositivo), no un consumible; no debería generar recordatorio de reposición como los demás"
+Piedras sanitarias para gato (Leo),Mascotas,bolsa,60,3,no,"Suma ""Piedritas""/""Piedras leo""/""Piedritas Leo"""
+Nuggets (congelados),Congelados y otros,paquete,90,1,no,
