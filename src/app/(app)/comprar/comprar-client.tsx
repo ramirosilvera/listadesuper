@@ -22,6 +22,7 @@ type Row = {
   unit_label: string;
   quantity: number;
   unit_price: string;
+  expiration_date: string;
 };
 
 export function ComprarClient({
@@ -48,6 +49,7 @@ export function ComprarClient({
         unit_label: it.products!.unit_label,
         quantity: it.quantity,
         unit_price: "",
+        expiration_date: "",
       })),
   );
   const [query, setQuery] = useState("");
@@ -81,6 +83,7 @@ export function ComprarClient({
         unit_label: product.unit_label,
         quantity: 1,
         unit_price: "",
+        expiration_date: "",
       },
     ]);
   }
@@ -135,6 +138,7 @@ export function ComprarClient({
         product_id: r.product_id,
         quantity: r.quantity,
         unit_price: isNaN(price) ? null : price,
+        expiration_date: r.expiration_date || null,
       };
     });
 
@@ -236,47 +240,60 @@ export function ComprarClient({
           {rows.map((row) => (
             <li
               key={row.key}
-              className="flex flex-wrap items-center gap-2 border-b border-zinc-100 bg-white px-3 py-2.5 last:border-b-0 dark:border-zinc-900 dark:bg-zinc-950"
+              className="flex flex-col gap-1.5 border-b border-zinc-100 bg-white px-3 py-2.5 last:border-b-0 dark:border-zinc-900 dark:bg-zinc-950"
             >
-              <span className="min-w-[7rem] flex-1 text-sm text-zinc-900 dark:text-zinc-50">
-                {row.name}
-              </span>
-              <input
-                type="number"
-                min={1}
-                step="1"
-                inputMode="numeric"
-                value={row.quantity}
-                onChange={(e) =>
-                  updateRow(row.key, {
-                    quantity: Math.max(1, Number(e.target.value) || 1),
-                  })
-                }
-                // text-base (16px), no text-sm: un input mas chico hace
-                // que iOS Safari haga auto-zoom al tocarlo.
-                className="h-11 w-16 rounded-lg border border-zinc-300 px-2 text-center text-base dark:border-zinc-700 dark:bg-zinc-900"
-                aria-label="Cantidad"
-              />
-              <span className="text-xs text-zinc-400">{row.unit_label}</span>
-              <input
-                type="text"
-                inputMode="decimal"
-                placeholder="$ precio unit."
-                value={row.unit_price}
-                onChange={(e) => updateRow(row.key, { unit_price: e.target.value })}
-                className="h-11 w-28 rounded-lg border border-zinc-300 px-2 text-base dark:border-zinc-700 dark:bg-zinc-900"
-                aria-label="Precio unitario"
-              />
-              <button
-                type="button"
-                onClick={() => removeRow(row.key)}
-                aria-label="Quitar"
-                className="flex h-11 w-11 shrink-0 select-none items-center justify-center text-zinc-400 active:text-red-500"
-              >
-                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M18 6 6 18M6 6l12 12" />
-                </svg>
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="min-w-[7rem] flex-1 text-sm text-zinc-900 dark:text-zinc-50">
+                  {row.name}
+                </span>
+                <input
+                  type="number"
+                  min={1}
+                  step="1"
+                  inputMode="numeric"
+                  value={row.quantity}
+                  onChange={(e) =>
+                    updateRow(row.key, {
+                      quantity: Math.max(1, Number(e.target.value) || 1),
+                    })
+                  }
+                  // text-base (16px), no text-sm: un input mas chico hace
+                  // que iOS Safari haga auto-zoom al tocarlo.
+                  className="h-11 w-16 rounded-lg border border-zinc-300 px-2 text-center text-base dark:border-zinc-700 dark:bg-zinc-900"
+                  aria-label="Cantidad"
+                />
+                <span className="text-xs text-zinc-400">{row.unit_label}</span>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="$ precio unit."
+                  value={row.unit_price}
+                  onChange={(e) => updateRow(row.key, { unit_price: e.target.value })}
+                  className="h-11 w-28 rounded-lg border border-zinc-300 px-2 text-base dark:border-zinc-700 dark:bg-zinc-900"
+                  aria-label="Precio unitario"
+                />
+                <button
+                  type="button"
+                  onClick={() => removeRow(row.key)}
+                  aria-label="Quitar"
+                  className="flex h-11 w-11 shrink-0 select-none items-center justify-center text-zinc-400 active:text-red-500"
+                >
+                  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M18 6 6 18M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <label className="flex items-center gap-2 text-xs text-zinc-500">
+                Vence el (opcional)
+                <input
+                  type="date"
+                  value={row.expiration_date}
+                  onChange={(e) => updateRow(row.key, { expiration_date: e.target.value })}
+                  className="h-9 rounded-lg border border-zinc-300 px-2 text-sm text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+                  aria-label={`Fecha de vencimiento de ${row.name}`}
+                />
+              </label>
             </li>
           ))}
         </ul>

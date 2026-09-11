@@ -99,6 +99,61 @@ export type Database = {
         }
         Relationships: []
       }
+      product_expirations: {
+        Row: {
+          created_at: string
+          expiration_date: string
+          household_id: string
+          id: string
+          product_id: string
+          purchase_item_id: string | null
+          quantity: number
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          expiration_date: string
+          household_id: string
+          id?: string
+          product_id: string
+          purchase_item_id?: string | null
+          quantity?: number
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          expiration_date?: string
+          household_id?: string
+          id?: string
+          product_id?: string
+          purchase_item_id?: string | null
+          quantity?: number
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_expirations_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "households"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_expirations_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_expirations_purchase_item_id_fkey"
+            columns: ["purchase_item_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           archived: boolean
@@ -421,6 +476,35 @@ export type Database = {
       }
     }
     Views: {
+      product_expirations_upcoming: {
+        Row: {
+          days_until: number | null
+          expiration_date: string | null
+          household_id: string | null
+          id: string | null
+          level: string | null
+          product_id: string | null
+          product_name: string | null
+          quantity: number | null
+          unit_label: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_expirations_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "households"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_expirations_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_stock: {
         Row: {
           household_id: string | null
@@ -472,6 +556,10 @@ export type Database = {
           p_store_id: string
         }
         Returns: string
+      }
+      resolve_expiration: {
+        Args: { p_expiration_id: string; p_status: string }
+        Returns: undefined
       }
     }
     Enums: {
