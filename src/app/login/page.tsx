@@ -40,14 +40,22 @@ export default function LoginPage() {
       return;
     }
 
-    const { error } = await supabase.auth.signUp({ email, password });
+    const { data, error } = await supabase.auth.signUp({ email, password });
     setLoading(false);
     if (error) {
       setError(error.message);
       return;
     }
+
+    if (data.session) {
+      // Confirmación por email deshabilitada: signUp ya deja al usuario logueado.
+      router.push("/");
+      router.refresh();
+      return;
+    }
+
     setInfo(
-      "Listo. Si tu proyecto pide confirmar el email, revisá tu correo antes de entrar.",
+      "Listo. Revisá tu correo para confirmar la cuenta antes de entrar.",
     );
   }
 
