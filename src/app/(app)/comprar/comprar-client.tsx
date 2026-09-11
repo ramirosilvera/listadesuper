@@ -5,7 +5,12 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button, Input } from "@/components/ui";
 
-type Product = { id: string; name: string; unit_label: string };
+type Product = {
+  id: string;
+  name: string;
+  unit_label: string;
+  default_shelf_life_days: number | null;
+};
 type Store = { id: string; name: string };
 
 type CheckedItem = {
@@ -13,6 +18,13 @@ type CheckedItem = {
   quantity: number;
   product_id: string;
   products: Product | null;
+};
+
+type Suggestion = {
+  product_id: string | null;
+  name: string | null;
+  unit_label: string | null;
+  restock_reason: string | null;
 };
 
 type Row = {
@@ -25,16 +37,29 @@ type Row = {
   expiration_date: string;
 };
 
+// Fecha de vencimiento sugerida a partir de la vida util estimada del
+// producto (misma logica que usa record_purchase en el server cuando no
+// se manda expiration_date explicito) — precargarla ahorra tener que
+// tipear la fecha a mano en cada compra; el campo sigue siendo editable.
+function suggestExpiration(shelfLifeDays: number | null): string {
+  if (!shelfLifeDays) return "";
+  const d = new Date();
+  d.setDate(d.getDate() + shelfLifeDays);
+  return d.toISOString().slice(0, 10);
+}
+
 export function ComprarClient({
   householdId,
   initialItems,
   allProducts,
   stores,
+  suggestions: initialSuggestions,
 }: {
   householdId: string;
   initialItems: CheckedItem[];
   allProducts: Product[];
   stores: Store[];
+  suggestions: Suggestion[];
 }) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
@@ -49,9 +74,10 @@ export function ComprarClient({
         unit_label: it.products!.unit_label,
         quantity: it.quantity,
         unit_price: "",
-        expiration_date: "",
+        expiration_date: suggestExpiration(it.products!.default_shelf_life_days),
       })),
   );
+  const [suggestions, setSuggestions] = useState(initialSuggestions);
   const [query, setQuery] = useState("");
   const [storeId, setStoreId] = useState<string>("");
   const [newStoreName, setNewStoreName] = useState("");
@@ -63,7 +89,7 @@ export function ComprarClient({
     return sum + (isNaN(price) ? 0 : price * r.quantity);
   }, 0);
 
-  const suggestions = useMemo(() => {
+  const productSuggestions = useMemo(() => {
     if (!query.trim()) return [];
     const q = query.trim().toLowerCase();
     const already = new Set(rows.map((r) => r.product_id));
@@ -71,6 +97,11 @@ export function ComprarClient({
       .filter((p) => !already.has(p.id) && p.name.toLowerCase().includes(q))
       .slice(0, 6);
   }, [query, allProducts, rows]);
+
+  const restockChips = useMemo(() => {
+    const already = new Set(rows.map((r) => r.product_id));
+    return suggestions.filter((s) => s.product_id && !already.has(s.product_id));
+  }, [suggestions, rows]);
 
   function addRow(product: Product) {
     setQuery("");
@@ -83,9 +114,10 @@ export function ComprarClient({
         unit_label: product.unit_label,
         quantity: 1,
         unit_price: "",
-        expiration_date: "",
+        expiration_date: suggestExpiration(product.default_shelf_life_days),
       },
     ]);
+    setSuggestions((prev) => prev.filter((s) => s.product_id !== product.id));
   }
 
   async function addNewProduct(e: FormEvent) {
@@ -95,7 +127,7 @@ export function ComprarClient({
     const { data: product, error } = await supabase
       .from("products")
       .insert({ household_id: householdId, name })
-      .select("id, name, unit_label")
+      .select("id, name, unit_label, default_shelf_life_days")
       .single();
     if (error || !product) return;
     addRow(product);
@@ -202,6 +234,39 @@ export function ComprarClient({
         )}
       </div>
 
+      {restockChips.length > 0 && (
+        <div>
+          <h2 className="mb-1.5 px-1 text-xs font-semibold tracking-wide text-zinc-400 uppercase">
+            Sugeridos para reponer
+          </h2>
+          <div className="flex flex-wrap gap-2">
+            {restockChips.map((s) =>
+              s.product_id ? (
+                <button
+                  key={s.product_id}
+                  type="button"
+                  onClick={() => {
+                    const product = allProducts.find((p) => p.id === s.product_id);
+                    addRow(
+                      product ?? {
+                        id: s.product_id!,
+                        name: s.name ?? "Producto",
+                        unit_label: s.unit_label ?? "unidad",
+                        default_shelf_life_days: null,
+                      },
+                    );
+                  }}
+                  className="flex min-h-9 select-none touch-manipulation items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 text-sm text-amber-800 active:bg-amber-100 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300 dark:active:bg-amber-900"
+                >
+                  <span>+</span>
+                  {s.name}
+                </button>
+              ) : null,
+            )}
+          </div>
+        </div>
+      )}
+
       <form onSubmit={addNewProduct} className="relative">
         <Input
           placeholder="Agregar producto a la compra…"
@@ -210,7 +275,7 @@ export function ComprarClient({
         />
         {query.trim() && (
           <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-lg dark:border-zinc-800 dark:bg-zinc-900">
-            {suggestions.map((p) => (
+            {productSuggestions.map((p) => (
               <button
                 key={p.id}
                 type="button"
@@ -285,7 +350,7 @@ export function ComprarClient({
               </div>
 
               <label className="flex items-center gap-2 text-xs text-zinc-500">
-                Vence el (opcional)
+                {row.expiration_date ? "Vence el (sugerido, editable)" : "Vence el (opcional)"}
                 <input
                   type="date"
                   value={row.expiration_date}

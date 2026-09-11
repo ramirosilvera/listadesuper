@@ -48,6 +48,8 @@ export function VencimientosTab({
   const supabase = useMemo(() => createClient(), []);
   const [expirations, setExpirations] = useState(initialExpirations);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [dateDraft, setDateDraft] = useState("");
 
   async function resolve(id: string, status: "consumed" | "discarded") {
     setBusyId(id);
@@ -58,6 +60,40 @@ export function VencimientosTab({
     setBusyId(null);
     if (!error) {
       setExpirations((prev) => prev.filter((e) => e.id !== id));
+    }
+  }
+
+  function startEditingDate(exp: Expiration) {
+    setEditingId(exp.id);
+    setDateDraft(exp.expiration_date ?? "");
+  }
+
+  async function saveDate(id: string) {
+    if (!dateDraft) {
+      setEditingId(null);
+      return;
+    }
+    setEditingId(null);
+    const { error } = await supabase
+      .from("product_expirations")
+      .update({ expiration_date: dateDraft })
+      .eq("id", id);
+    if (!error) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const target = new Date(dateDraft + "T00:00:00");
+      const daysUntil = Math.round((target.getTime() - today.getTime()) / 86400000);
+      const level =
+        daysUntil < 0 ? "expired" : daysUntil <= 2 ? "red" : daysUntil <= 7 ? "amber" : "green";
+      setExpirations((prev) =>
+        prev
+          .map((e) =>
+            e.id === id
+              ? { ...e, expiration_date: dateDraft, days_until: daysUntil, level }
+              : e,
+          )
+          .sort((a, b) => (a.expiration_date ?? "").localeCompare(b.expiration_date ?? "")),
+      );
     }
   }
 
@@ -85,9 +121,27 @@ export function VencimientosTab({
                 {exp.product_name ?? "Producto"}
                 {exp.quantity && exp.quantity !== 1 ? ` · ${exp.quantity} ${exp.unit_label ?? ""}` : ""}
               </p>
-              <span className={`mt-0.5 inline-block rounded-full px-2 py-0.5 text-xs font-medium ${style.badge}`}>
-                {style.label(exp.days_until)}
-              </span>
+              {editingId === exp.id ? (
+                <div className="mt-1 flex items-center gap-1.5">
+                  <input
+                    type="date"
+                    autoFocus
+                    value={dateDraft}
+                    onChange={(e) => setDateDraft(e.target.value)}
+                    onBlur={() => saveDate(exp.id)}
+                    className="h-8 rounded-lg border border-zinc-300 px-2 text-sm text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+                    aria-label={`Fecha de vencimiento de ${exp.product_name}`}
+                  />
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => startEditingDate(exp)}
+                  className={`mt-0.5 inline-block rounded-full px-2 py-0.5 text-xs font-medium underline decoration-dotted ${style.badge}`}
+                >
+                  {style.label(exp.days_until)}
+                </button>
+              )}
             </div>
             <div className="flex gap-1.5">
               <button

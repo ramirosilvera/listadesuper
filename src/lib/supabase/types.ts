@@ -142,8 +142,22 @@ export type Database = {
             foreignKeyName: "product_expirations_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "product_replenishment"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_expirations_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_expirations_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "top_products_90d"
+            referencedColumns: ["product_id"]
           },
           {
             foreignKeyName: "product_expirations_purchase_item_id_fkey"
@@ -203,6 +217,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "spending_by_category_30d"
+            referencedColumns: ["category_id"]
+          },
+          {
             foreignKeyName: "products_household_id_fkey"
             columns: ["household_id"]
             isOneToOne: false
@@ -244,8 +265,22 @@ export type Database = {
             foreignKeyName: "purchase_items_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "product_replenishment"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "purchase_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "top_products_90d"
+            referencedColumns: ["product_id"]
           },
           {
             foreignKeyName: "purchase_items_purchase_id_fkey"
@@ -353,8 +388,22 @@ export type Database = {
             foreignKeyName: "shopping_list_items_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "product_replenishment"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "shopping_list_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shopping_list_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "top_products_90d"
+            referencedColumns: ["product_id"]
           },
         ]
       }
@@ -436,8 +485,22 @@ export type Database = {
             foreignKeyName: "stock_movements_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "product_replenishment"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "stock_movements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "top_products_90d"
+            referencedColumns: ["product_id"]
           },
           {
             foreignKeyName: "stock_movements_purchase_item_id_fkey"
@@ -503,8 +566,22 @@ export type Database = {
             foreignKeyName: "product_expirations_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "product_replenishment"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_expirations_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_expirations_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "top_products_90d"
+            referencedColumns: ["product_id"]
           },
         ]
       }
@@ -528,6 +605,44 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "households"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_stock: {
+        Row: {
+          household_id: string | null
+          last_movement_at: string | null
+          product_id: string | null
+          quantity_on_hand: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_movements_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "households"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "product_replenishment"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "stock_movements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "top_products_90d"
+            referencedColumns: ["product_id"]
           },
         ]
       }
@@ -584,30 +699,6 @@ export type Database = {
           },
         ]
       }
-      product_stock: {
-        Row: {
-          household_id: string | null
-          last_movement_at: string | null
-          product_id: string | null
-          quantity_on_hand: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "stock_movements_household_id_fkey"
-            columns: ["household_id"]
-            isOneToOne: false
-            referencedRelation: "households"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "stock_movements_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "products"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
     }
     Functions: {
       adjust_stock: {
@@ -640,6 +731,7 @@ export type Database = {
         Args: { p_expiration_id: string; p_status: string }
         Returns: undefined
       }
+      seed_initial_stock: { Args: { p_household_id: string }; Returns: Json }
     }
     Enums: {
       [_ in never]: never

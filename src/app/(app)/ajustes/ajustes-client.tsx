@@ -19,6 +19,8 @@ export function AjustesClient({
   const [copied, setCopied] = useState(false);
   const [importing, startImport] = useTransition();
   const [importMessage, setImportMessage] = useState<string | null>(null);
+  const [seeding, startSeed] = useTransition();
+  const [seedMessage, setSeedMessage] = useState<string | null>(null);
 
   async function copyCode() {
     if (!household.invite_code) return;
@@ -29,6 +31,26 @@ export function AjustesClient({
     } catch {
       // clipboard puede no estar disponible (ej. sin HTTPS); no es crítico.
     }
+  }
+
+  function seedInitialStock() {
+    startSeed(async () => {
+      const supabase = createClient();
+      const { data, error } = await supabase.rpc("seed_initial_stock", {
+        p_household_id: household.id,
+      });
+      if (error) {
+        setSeedMessage(error.message);
+        return;
+      }
+      const result = data as { stock_seeded: number; expirations_seeded: number };
+      setSeedMessage(
+        result.stock_seeded === 0
+          ? "No había productos nuevos para cargar: ya tenían stock."
+          : `Listo: se cargó 1 unidad de stock a ${result.stock_seeded} producto${result.stock_seeded === 1 ? "" : "s"} (con vencimiento estimado en ${result.expirations_seeded}), como si se hubieran comprado hoy. Podés ajustar cantidades y fechas desde Stock.`,
+      );
+      router.refresh();
+    });
   }
 
   async function logout() {
@@ -92,6 +114,30 @@ export function AjustesClient({
         </Button>
         {importMessage && (
           <p className="mt-2 text-sm text-[#16A34A]">{importMessage}</p>
+        )}
+      </Card>
+
+      <Card>
+        <p className="text-sm text-zinc-500">Stock inicial</p>
+        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+          Carga 1 unidad de stock para cada producto del catálogo que todavía
+          no tenga movimientos, y estima su próximo vencimiento a partir de
+          hoy (para los que tienen vida útil conocida) — como si hubieras
+          comprado todo hoy. Después podés ajustar cantidades desde{" "}
+          <span className="font-medium">Stock</span> y fechas desde{" "}
+          <span className="font-medium">Vencimientos</span>. Se puede correr
+          más de una vez: solo completa lo que falte.
+        </p>
+        <Button
+          variant="secondary"
+          className="mt-3 w-full"
+          disabled={seeding}
+          onClick={seedInitialStock}
+        >
+          {seeding ? "Cargando…" : "Cargar stock inicial"}
+        </Button>
+        {seedMessage && (
+          <p className="mt-2 text-sm text-[#16A34A]">{seedMessage}</p>
         )}
       </Card>
 
