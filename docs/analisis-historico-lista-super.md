@@ -4,7 +4,9 @@ Este documento resume la normalización del historial de la lista de súper (Goo
 
 Archivos generados:
 - `data/seed/categorias.csv` — 12 categorías de supermercado.
-- `data/seed/productos_historico.csv` — 141 productos normalizados, con categoría, unidad de referencia, vida útil estimada (para el default de vencimiento) y frecuencia histórica de compra.
+- `data/seed/productos_historico.csv` — 140 productos normalizados, con categoría, unidad de referencia, vida útil estimada (para el default de vencimiento) y frecuencia histórica de compra.
+
+> **Actualización:** tras una ronda de preguntas al usuario se resolvieron 4 de las ambigüedades de mayor frecuencia (ver sección "Resueltas con el usuario" más abajo). Quedan 9 sin resolver, de baja frecuencia (1-2 apariciones cada una), documentadas para corregir directamente en la app.
 
 ## Metodología
 
@@ -18,10 +20,10 @@ Archivos generados:
 
 | Categoría | Compras históricas | Productos distintos |
 |---|---:|---:|
-| Almacén | 95 | 52 |
-| Limpieza del hogar | 86 | 23 |
+| Almacén | 96 | 52 |
+| Limpieza del hogar | 81 | 21 |
 | Lácteos, huevos y fiambres | 65 | 13 |
-| Higiene y cuidado personal | 39 | 13 |
+| Higiene y cuidado personal | 40 | 14 |
 | Descartables y hogar | 36 | 13 |
 | Panadería | 17 | 4 |
 | Insecticidas y repelentes | 10 | 9 |
@@ -48,27 +50,32 @@ La casi ausencia de Verdulería (4) y Fiambrería/Congelados (1-2) probablemente
 11. Azúcar — 7
 12. Algodón — 7
 13. Queso crema — 6
-14. Mermelada — 6
-15. Antigrasa (desengrasante) — 6
-16. Aceite de oliva — 5
-17. Jabón (sin especificar) — 5
+14. Aceite de oliva — 6
+15. Mermelada — 6
+16. Antigrasa (desengrasante) — 6
+17. Jabón de tocador (pan, para bañarse) — 5
 18. Papel higiénico — 5
 19. Pasta dental — 4
 20. Crema de enjuague (acondicionador) — 4
 
 Estos son los mejores candidatos para tener, desde el día 1, un umbral manual de "avisame cuando quede poco" (Fase 4 del plan), porque ya sabemos que se compran seguido.
 
-## Ítems que quedaron marcados "a confirmar" (13)
+## Resueltas con el usuario (4)
 
-No se adivinaron para no ensuciar el catálogo. Se puede corregir directamente en la app una vez cargada, pero conviene resolver las de mayor frecuencia antes de importar:
+| Duda original | Frecuencia | Resolución | Producto final en el catálogo |
+|---|---:|---|---|
+| "Jabón" a secas | 5 | El jabón de manos y el de ropa ya se anotaban por separado (líquidos); "Jabón" a secas es el pan de jabón de tocador | Jabón de tocador (pan, para bañarse) |
+| "Cif" a secas | 3 | El hogar compra ambos (crema y pisos) indistintamente; no se puede reasignar el historial con certeza a uno u otro, así que estas 3 compras quedan sin volcar a un producto puntual — a futuro cada compra se va a registrar contra `Cif crema` o `Cif pisos` según corresponda | *(sin entrada propia — se descartó del seed)* |
+| "Aceite"/"Óleo" a secas | 2 | Son dos productos completamente distintos: "Aceite" es aceite de oliva de uso diario; "Óleo" es óleo calcáreo (higiene/piel), no aceite de cocina | Aceite de oliva (+1) y Óleo calcáreo (nuevo producto) |
+| "Aceite de oliva suelo" / "Aceite suelo" | 2 | "Suelo" es "Zuelo", una marca de aceite de oliva premium que compran para ocasiones especiales, distinta del aceite de uso diario | Aceite de oliva premium (marca Zuelo) |
+
+## Ítems que quedan marcados "a confirmar" (9)
+
+Todos de baja frecuencia (1-2 apariciones). No se adivinaron para no ensuciar el catálogo; se pueden corregir directamente en la app cuando aparezcan en una próxima compra real, no hace falta resolverlos ahora:
 
 | Producto (tentativo) | Frecuencia | Duda |
 |---|---:|---|
-| Jabón (sin especificar) | 5 | ¿Tocador, para platos o para ropa? |
-| Cif (sin especificar) | 3 | ¿Cif crema o Cif pisos? |
 | Queso (sin especificar) | 2 | ¿Cuál de los 5 tipos de queso que aparecen en la lista? |
-| Aceite (sin especificar) | 2 | ¿De oliva o de girasol? |
-| Aceite para pisos de madera | 2 | Interpretación tentativa de "Aceite de oliva suelo" / "Aceite suelo" — podría ser un error de tipeo que mezcló dos ítems distintos |
 | Espirales | 1 | ¿Fideos tipo espiral (pasta) o espiral repelente de mosquitos? |
 | Coco | 1 | ¿Coco rallado (almacén) o coco fresco (verdulería)? |
 | Shampoo y crema de enjuague (envase chico) | 1 | ¿Para bebé o para viaje? |

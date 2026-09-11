@@ -29,9 +29,9 @@ Harina leudante,Almacén,kg,180,1,no,
 Sal,Almacén,kg,730,2,no,
 Sal fina,Almacén,kg,730,1,no,
 Sal parrillera,Almacén,kg,730,1,no,
-Aceite de oliva,Almacén,L,365,5,no,"Suma ""Aceite de oliva""/""Aceite oliva cocinar"""
+Aceite de oliva,Almacén,L,365,6,no,"Suma ""Aceite de oliva""/""Aceite oliva cocinar""/""Aceite"" (confirmado por el usuario como el aceite de uso diario)"
 Aceite de girasol,Almacén,L,365,1,no,
-Aceite (sin especificar),Almacén,L,365,2,si,"Suma ""Aceite""/""Óleo""; confirmar si es de oliva o girasol"
+Aceite de oliva premium (marca Zuelo),Almacén,L,365,2,no,"Suma ""Aceite de oliva suelo""/""Aceite suelo""; confirmado por el usuario: ""suelo"" es la marca ""Zuelo"", un aceite de oliva premium distinto del de uso diario"
 Pan rallado,Almacén,paquete,180,2,no,
 Dulce de leche,Almacén,pote,90,3,no,
 Mermelada,Almacén,frasco,180,6,no,
@@ -80,7 +80,6 @@ Lavandina,Limpieza del hogar,L,180,12,no,
 Blem pisos,Limpieza del hogar,L,90,13,no,"Suma ""Blem""/""Blem pisos""/""Echo""/""Echo (Blem)""; ""Echo"" es el alias que usan para Blem"
 Cif crema,Limpieza del hogar,pote,120,3,no,
 Cif pisos,Limpieza del hogar,L,90,3,no,"Suma ""Cif pisos""/""Ciff pisos"""
-Cif (sin especificar),Limpieza del hogar,unidad,90,3,si,"No se indicaba si era Cif crema o Cif pisos"
 Antigrasa (desengrasante),Limpieza del hogar,unidad,90,6,no,"Suma ""Antigrasa""/""Rociador antigrasa""/""Mister músculo antigrasa naranja"""
 Limpiador de pisos (genérico),Limpieza del hogar,L,90,3,no,"Sin marca específica"
 Procenex piso,Limpieza del hogar,L,90,2,no,"Suma ""Procenex""/""Procenez piso"" (typo)"
@@ -97,8 +96,7 @@ Virulana (esponja de acero),Limpieza del hogar,paquete,180,2,no,"Suma ""Virulana
 Trapos de piso,Limpieza del hogar,unidad,180,3,no,
 Lustramuebles,Limpieza del hogar,aerosol,180,1,no,
 Pastillas para lavavajillas (máquina),Limpieza del hogar,caja,180,2,no,
-Aceite para pisos de madera,Limpieza del hogar,botella,180,2,si,"Interpretación tentativa de ""Aceite de oliva suelo""/""Aceite suelo""; podría ser un error de tipeo mezclando dos ítems distintos"
-Jabón (sin especificar),Higiene y cuidado personal,unidad,90,5,si,"No se indicaba si era jabón de tocador, de ropa o para platos"
+"Jabón de tocador (pan, para bañarse)",Higiene y cuidado personal,unidad,90,5,no,"Se resolvió con el usuario: el jabón de manos y el de ropa ya se anotaban por separado (líquidos), así que ""Jabón"" a secas se interpreta como el pan de jabón de tocador"
 Jabón de manos,Higiene y cuidado personal,botella,120,3,no,
 Jabón líquido de manos,Higiene y cuidado personal,botella,120,3,no,"Incluye una compra marca ""Oli"""
 Pasta dental,Higiene y cuidado personal,pomo,60,4,no,
@@ -111,6 +109,7 @@ Desodorante,Higiene y cuidado personal,unidad,90,2,no,
 Desodorante (Rami),Higiene y cuidado personal,unidad,90,2,no,
 Algodón,Higiene y cuidado personal,paquete,180,7,no,
 Pañuelos descartables,Higiene y cuidado personal,caja,90,2,no,"Suma ""Pañuelitos""/""Carilinas"" (marca)"
+Óleo calcáreo,Higiene y cuidado personal,botella,180,1,no,"Confirmado por el usuario: no es aceite de cocina, es un producto de higiene/piel distinto"
 Pañales Pampers talle G,Bebé,paquete,90,1,no,
 Pañales (sin especificar),Bebé,paquete,90,1,si,"Marca y talle no indicados"
 Toallitas húmedas para bebé,Bebé,paquete,60,1,no,
