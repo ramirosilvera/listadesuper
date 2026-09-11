@@ -36,7 +36,7 @@ RLS activado desde la primera migración, scopeado por `household_id`, función 
 
 ## Roadmap por fases
 
-- **Fase 0 — Setup:** proyecto Supabase, Auth, repo Next.js + Vercel, RLS base, favicon/manifest (ya generados, ver abajo).
+- **Fase 0 — Setup (✅ completa):** proyecto Supabase (`listadesuper`, región `sa-east-1`), scaffold Next.js 16 (App Router) + Tailwind v4, cliente de Supabase (`@supabase/ssr`) para browser/server/proxy, favicon/manifest integrados vía las convenciones de archivo de Next.js (`app/icon.svg`, `app/apple-icon.png`, `app/manifest.ts`), y migración base de RLS (`households`/`household_members`, ver `supabase/migrations/`). Auth de Supabase viene habilitado por default en el proyecto (falta cablear las pantallas de login, eso es Fase 1). Deploy en Vercel: pendiente, se hace desde el dashboard de Vercel conectando el repo (no hay conector de Vercel disponible en este entorno). `shadcn/ui`: pendiente de inicializar — `ui.shadcn.com` está bloqueado por la política de red del entorno donde se hizo el scaffold; correr `npx shadcn@latest init -d` desde una máquina sin esa restricción antes de armar las pantallas de Fase 1.
 - **Fase 1 — MVP núcleo:** hogares e invitaciones, catálogo de productos (seed desde `data/seed/productos_historico.csv`), lista compartida en tiempo real, stock manual, registrar compra manual.
 - **Fase 2 — Vencimientos y recordatorios:** fecha de vencimiento al registrar compra, job nocturno, notificaciones push + email, semáforo visual.
 - **Fase 3 — OCR de tickets:** subida de foto, extracción con Claude vision, pantalla de revisión obligatoria antes de confirmar.
