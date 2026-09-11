@@ -179,4 +179,25 @@ A pedido explícito del usuario, se hizo una pasada dedicada a que la app se sie
 - **Micro-detalles táctiles**: se sacó el resaltado gris que Safari muestra al tocar (`-webkit-tap-highlight-color`), se evitó el rebote de scroll de doble nivel (`overscroll-behavior`), se agregó `touch-manipulation` + `select-none` a los botones para que no haya selección de texto accidental ni delay al tocar, y los estados de color pasaron a reaccionar también a `active:` (no solo `hover:`, que en iOS puede quedar "pegado" después de un toque).
 - **Bug de paso (no relacionado a iOS, encontrado de rebote)**: `body` tenía un `font-family: Arial` hardcodeado que pisaba la fuente Geist ya cargada — la tipografía elegida en Fase 0 nunca se estaba aplicando. Corregido.
 
+---
+
+## Fase 6: carga inicial real + sugerencias en Comprar (a pedido del usuario, autónoma)
+
+Con la cuenta y el hogar "Casa" ya creados en producción, el usuario pidió tres cosas: (1) importar el catálogo normalizado del histórico de Keep, (2) cargar fechas de vencimiento "como si se hubiera comprado todo hoy" pero editables, y (3) que Comprar sugiera qué renovar para minimizar la carga manual.
+
+**Ejecutado directamente contra el proyecto real** (`ijzgaudtadsnvkkmjhbb`, hogar "Casa", `1ce27171-…`) vía SQL admin, no solo como código disponible para apretar un botón:
+- 12 categorías + 140 productos importados (misma normalización ya validada del histórico de Keep).
+- Nueva RPC `seed_initial_stock(p_household_id)` (SECURITY DEFINER, idempotente — solo llena huecos, se puede volver a correr): carga 1 unidad de stock por producto sin movimientos previos, y un vencimiento estimado (hoy + `default_shelf_life_days`) por producto sin vencimiento activo. Corrida una vez para "Casa": 140 productos con stock, 140 con vencimiento estimado.
+- Botón "Cargar stock inicial" en Ajustes para poder repetir esto a futuro (ej. si se agregan productos nuevos al catálogo).
+
+**Supuesto explícito (no un hecho verificado)**: se asumió 1 unidad de cada producto como punto de partida, porque no hay forma de saber la cantidad real que el usuario tiene en la alacena hoy. Es una aproximación deliberada y de bajo costo de corrección — todo es editable con un toque desde Stock (+/-) y ahora también la fecha de vencimiento directamente desde Vencimientos (antes solo se podía marcar como consumido/descartado, no editar la fecha).
+
+**Comprar** ahora hace dos cosas para reducir tipeo:
+- Precarga la fecha de vencimiento sugerida por fila usando `default_shelf_life_days` del producto (la misma cuenta que ya hacía `record_purchase` en el server si no se mandaba fecha) — editable, no forzada.
+- Suma una sección "Sugeridos para reponer" con los mismos candidatos de `product_replenishment` que ya se mostraban en Lista ("Se están por acabar"), para agregar a la compra de un toque productos que no estaban tildados en la lista.
+
+**Aclaración importante para el usuario**: como recién se cargó todo con stock=1 y sin historial de consumo ni umbral manual, los chips "Sugeridos para reponer" van a aparecer vacíos hasta que haya al menos 2 bajas de stock reales en 90 días (predicción automática) o se configure un umbral manual por producto desde Stock — esto es el diseño ya aprobado en Fase 4, no una falla de esta carga inicial.
+
+Verificado con `tsc --noEmit` y `npm run lint` limpios, y con conteos reales post-carga contra la base (140/140/140/140 en productos, movimientos, vencimientos activos y productos con stock > 0).
+
 No se armó splash screen específico para iOS (`apple-touch-startup-image` por tamaño de dispositivo) — es papeleo de bajo impacto para un hogar de 2 personas; se puede sumar más adelante si se nota falta.
