@@ -2,7 +2,11 @@
 
 Documento vivo con el plan completo del proyecto: arquitectura, modelo de datos, roadmap y las decisiones de diseño/marca. Se actualiza a medida que el Consejo revisa y el plan evoluciona.
 
-**Estado actual:** Fases 0 a 5 completas (setup, MVP núcleo, vencimientos, responsive/iOS, predicción de reposición e informes gráficos) — la app es utilizable de punta a punta. Quedan pendientes, todas por una decisión o un secret del usuario, no por trabajo técnico propio: notificaciones push/email (Fase 2), OCR de tickets (Fase 3, necesita `ANTHROPIC_API_KEY`), y el deploy a Vercel (conexión manual, no hay conector disponible en este entorno). Ver el detalle de cada fase más abajo.
+**Estado actual:** Fases 0 a 5 completas (setup, MVP núcleo, vencimientos, responsive/iOS, predicción de reposición e informes gráficos) — la app es utilizable de punta a punta.
+
+**Decisión del usuario:** por ahora, sin notificaciones push/email (Fase 2) y sin OCR de tickets (Fase 3). Quedan fuera de alcance hasta que se pida explícitamente retomarlas — no son un pendiente activo. El semáforo de vencimientos y la sección "se están por acabar" ya cubren el caso de uso mirando la app.
+
+**Único paso manual restante:** conectar el repo a Vercel para que la app tenga una URL real (fuera del control de esta sesión — no hay conector de Vercel disponible acá). Ver instrucciones paso a paso conversadas con el usuario.
 
 ## Objetivo y criterios de éxito
 
