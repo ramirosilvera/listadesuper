@@ -22,6 +22,13 @@ type ListItem = {
   products: Product | null;
 };
 
+type Suggestion = {
+  product_id: string | null;
+  name: string | null;
+  unit_label: string | null;
+  restock_reason: string | null;
+};
+
 export function ShoppingListClient({
   householdId,
   listId,
@@ -29,6 +36,7 @@ export function ShoppingListClient({
   initialItems,
   allProducts,
   categories,
+  suggestions: initialSuggestions,
 }: {
   householdId: string;
   listId: string;
@@ -36,10 +44,12 @@ export function ShoppingListClient({
   initialItems: ListItem[];
   allProducts: Product[];
   categories: Category[];
+  suggestions: Suggestion[];
 }) {
   const supabase = useMemo(() => createClient(), []);
   const [items, setItems] = useState<ListItem[]>(initialItems);
   const [products, setProducts] = useState<Product[]>(allProducts);
+  const [suggestions, setSuggestions] = useState(initialSuggestions);
   const [query, setQuery] = useState("");
   const [adding, setAdding] = useState(false);
 
@@ -141,7 +151,7 @@ export function ShoppingListClient({
 
   const checkedCount = items.filter((it) => it.checked).length;
 
-  const suggestions = useMemo(() => {
+  const productSuggestions = useMemo(() => {
     if (!query.trim()) return [];
     const q = query.trim().toLowerCase();
     const alreadyInList = new Set(items.map((it) => it.product_id));
@@ -196,6 +206,7 @@ export function ShoppingListClient({
       setItems((prev) =>
         prev.some((it) => it.id === data.id) ? prev : [...prev, data as ListItem],
       );
+      setSuggestions((prev) => prev.filter((s) => s.product_id !== product.id));
     }
   }
 
@@ -227,6 +238,36 @@ export function ShoppingListClient({
 
   return (
     <div className="flex flex-col gap-4 pb-4">
+      {suggestions.length > 0 && (
+        <div>
+          <h2 className="mb-1.5 px-1 text-xs font-semibold tracking-wide text-zinc-400 uppercase">
+            Se están por acabar
+          </h2>
+          <div className="flex flex-wrap gap-2">
+            {suggestions.map((s) =>
+              s.product_id ? (
+                <button
+                  key={s.product_id}
+                  type="button"
+                  onClick={() =>
+                    addExistingProduct({
+                      id: s.product_id!,
+                      name: s.name ?? "Producto",
+                      unit_label: s.unit_label ?? "unidad",
+                      category_id: null,
+                    })
+                  }
+                  className="flex min-h-9 select-none touch-manipulation items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 text-sm text-amber-800 active:bg-amber-100 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300 dark:active:bg-amber-900"
+                >
+                  <span>+</span>
+                  {s.name}
+                </button>
+              ) : null,
+            )}
+          </div>
+        </div>
+      )}
+
       <form onSubmit={handleAddSubmit} className="relative">
         <Input
           placeholder="Agregar producto…"
@@ -235,7 +276,7 @@ export function ShoppingListClient({
         />
         {query.trim() && (
           <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-lg dark:border-zinc-800 dark:bg-zinc-900">
-            {suggestions.map((p) => (
+            {productSuggestions.map((p) => (
               <button
                 key={p.id}
                 type="button"

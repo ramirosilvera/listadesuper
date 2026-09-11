@@ -39,7 +39,7 @@ export default async function ListaPage() {
   const supabase = await createClient();
   const listId = await getOrCreateActiveList(household.id);
 
-  const [{ data: items }, { data: products }, { data: categories }] =
+  const [{ data: items }, { data: products }, { data: categories }, { data: replenishment }] =
     await Promise.all([
       supabase
         .from("shopping_list_items")
@@ -59,7 +59,17 @@ export default async function ListaPage() {
         .select("id, name, sort_order")
         .eq("household_id", household.id)
         .order("sort_order", { ascending: true }),
+      supabase
+        .from("product_replenishment")
+        .select("product_id, name, unit_label, restock_reason")
+        .eq("household_id", household.id)
+        .eq("should_restock", true),
     ]);
+
+  const idsInList = new Set((items ?? []).map((it) => it.product_id));
+  const suggestions = (replenishment ?? []).filter(
+    (r) => r.product_id && !idsInList.has(r.product_id),
+  );
 
   return (
     <ShoppingListClient
@@ -69,6 +79,7 @@ export default async function ListaPage() {
       initialItems={items ?? []}
       allProducts={products ?? []}
       categories={categories ?? []}
+      suggestions={suggestions}
     />
   );
 }

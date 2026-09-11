@@ -10,6 +10,7 @@ type Product = {
   unit_label: string;
   category_id: string | null;
   quantity_on_hand: number;
+  low_stock_threshold: number | null;
 };
 
 type Category = { id: string; name: string; sort_order: number };
@@ -26,6 +27,8 @@ export function StockClient({
   const supabase = useMemo(() => createClient(), []);
   const [products, setProducts] = useState(initialProducts);
   const [query, setQuery] = useState("");
+  const [editingThresholdId, setEditingThresholdId] = useState<string | null>(null);
+  const [thresholdDraft, setThresholdDraft] = useState("");
 
   const categoryById = useMemo(() => {
     const map = new Map<string, Category>();
@@ -69,6 +72,28 @@ export function StockClient({
     });
   }
 
+  function startEditingThreshold(product: Product) {
+    setEditingThresholdId(product.id);
+    setThresholdDraft(
+      product.low_stock_threshold !== null ? String(product.low_stock_threshold) : "",
+    );
+  }
+
+  async function saveThreshold(product: Product) {
+    const parsed = thresholdDraft.trim() === "" ? null : Number(thresholdDraft);
+    const value = parsed !== null && !isNaN(parsed) && parsed >= 0 ? parsed : null;
+
+    setProducts((prev) =>
+      prev.map((p) => (p.id === product.id ? { ...p, low_stock_threshold: value } : p)),
+    );
+    setEditingThresholdId(null);
+
+    await supabase
+      .from("products")
+      .update({ low_stock_threshold: value })
+      .eq("id", product.id);
+  }
+
   return (
     <div className="flex flex-col gap-4 pb-4">
       <Input
@@ -97,11 +122,13 @@ export function StockClient({
                   : p.quantity_on_hand <= 1
                     ? "low"
                     : "ok";
+              const isEditingThreshold = editingThresholdId === p.id;
               return (
                 <li
                   key={p.id}
-                  className="flex items-center gap-3 border-b border-zinc-100 bg-white px-3 py-2.5 last:border-b-0 dark:border-zinc-900 dark:bg-zinc-950"
+                  className="flex flex-col gap-1.5 border-b border-zinc-100 bg-white px-3 py-2.5 last:border-b-0 dark:border-zinc-900 dark:bg-zinc-950"
                 >
+                <div className="flex items-center gap-3">
                   <span
                     className={`h-2.5 w-2.5 shrink-0 rounded-full ${
                       level === "empty"
@@ -112,9 +139,20 @@ export function StockClient({
                     }`}
                     aria-hidden
                   />
-                  <span className="flex-1 text-sm text-zinc-900 dark:text-zinc-50">
-                    {p.name}
-                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm text-zinc-900 dark:text-zinc-50">{p.name}</p>
+                    {!isEditingThreshold && (
+                      <button
+                        type="button"
+                        onClick={() => startEditingThreshold(p)}
+                        className="text-xs text-zinc-400 underline decoration-dotted active:text-zinc-600 dark:active:text-zinc-300"
+                      >
+                        {p.low_stock_threshold !== null
+                          ? `Avisar con ${p.low_stock_threshold} o menos`
+                          : "Avisar con poco stock"}
+                      </button>
+                    )}
+                  </div>
                   <div className="flex items-center text-sm text-zinc-600 dark:text-zinc-400">
                     <button
                       type="button"
@@ -143,6 +181,39 @@ export function StockClient({
                       </span>
                     </button>
                   </div>
+                </div>
+
+                {isEditingThreshold && (
+                  <div className="flex items-center gap-2 pl-[1.375rem]">
+                    <label className="text-xs text-zinc-500">
+                      Avisar cuando queden
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      inputMode="numeric"
+                      autoFocus
+                      value={thresholdDraft}
+                      onChange={(e) => setThresholdDraft(e.target.value)}
+                      placeholder="sin aviso"
+                      className="h-9 w-20 rounded-lg border border-zinc-300 px-2 text-center text-base dark:border-zinc-700 dark:bg-zinc-900"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => saveThreshold(p)}
+                      className="min-h-9 select-none touch-manipulation rounded-full bg-[#16A34A] px-3 text-xs font-medium text-white active:bg-[#15803D]"
+                    >
+                      Guardar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingThresholdId(null)}
+                      className="min-h-9 select-none touch-manipulation rounded-full px-2 text-xs text-zinc-500"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                )}
                 </li>
               );
             })}

@@ -10,6 +10,7 @@ type Product = {
   unit_label: string;
   category_id: string | null;
   quantity_on_hand: number;
+  low_stock_threshold: number | null;
 };
 
 type Category = { id: string; name: string; sort_order: number };

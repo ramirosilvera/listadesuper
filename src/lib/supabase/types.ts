@@ -163,6 +163,7 @@ export type Database = {
           default_shelf_life_days: number | null
           household_id: string
           id: string
+          low_stock_threshold: number | null
           name: string
           notes: string | null
           unit_label: string
@@ -175,6 +176,7 @@ export type Database = {
           default_shelf_life_days?: number | null
           household_id: string
           id?: string
+          low_stock_threshold?: number | null
           name: string
           notes?: string | null
           unit_label?: string
@@ -187,6 +189,7 @@ export type Database = {
           default_shelf_life_days?: number | null
           household_id?: string
           id?: string
+          low_stock_threshold?: number | null
           name?: string
           notes?: string | null
           unit_label?: string
@@ -501,6 +504,29 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_replenishment: {
+        Row: {
+          avg_daily_consumption: number | null
+          estimated_days_remaining: number | null
+          household_id: string | null
+          low_stock_threshold: number | null
+          name: string | null
+          product_id: string | null
+          quantity_on_hand: number | null
+          restock_reason: string | null
+          should_restock: boolean | null
+          unit_label: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "households"
             referencedColumns: ["id"]
           },
         ]
