@@ -2,6 +2,8 @@
 
 Documento vivo con el plan completo del proyecto: arquitectura, modelo de datos, roadmap y las decisiones de diseño/marca. Se actualiza a medida que el Consejo revisa y el plan evoluciona.
 
+**Estado actual:** Fases 0 a 5 completas (setup, MVP núcleo, vencimientos, responsive/iOS, predicción de reposición e informes gráficos) — la app es utilizable de punta a punta. Quedan pendientes, todas por una decisión o un secret del usuario, no por trabajo técnico propio: notificaciones push/email (Fase 2), OCR de tickets (Fase 3, necesita `ANTHROPIC_API_KEY`), y el deploy a Vercel (conexión manual, no hay conector disponible en este entorno). Ver el detalle de cada fase más abajo.
+
 ## Objetivo y criterios de éxito
 
 **Objetivo:** una web app (Next.js + Supabase) para un hogar compartido que reemplace la lista de Google Keep, controle stock, avise antes de que se termine algo o se venza, y muestre informes gráficos de compras/stock/vencimientos.
@@ -42,7 +44,7 @@ RLS activado desde la primera migración, scopeado por `household_id`, función 
   - **Pendiente, necesita decisión/secret:** el job nocturno + notificaciones push/email no se construyeron todavía — no tiene sentido armar un cron sin nada que dispare al final. Necesita: (a) confirmar si querés push, email, o ambos, y (b) el secret correspondiente (VAPID keys para push web, o una API key de un proveedor de mail tipo Resend). Mientras tanto, el semáforo ya es 100% funcional *mirando la app* — el usuario simplemente no recibe un aviso proactivo todavía si no la abre.
 - **Fase 3 — OCR de tickets:** subida de foto, extracción con Claude vision, pantalla de revisión obligatoria antes de confirmar.
 - **Fase 4 — Predicción de reposición (✅ completa):** vista `product_replenishment` (no una tabla `consumption_estimates` aparte — todo derivado de `stock_movements`, siempre fresco, sin job que la actualice). Modo híbrido tal como se había acordado: predicción automática por consumo real (ventana móvil de hasta 90 días, activa recién con ≥2 bajas de stock — con un solo dato no hay tasa confiable) + umbral manual configurable por producto (`products.low_stock_threshold`) como fallback desde el día 1. Sección "Se están por acabar" en la Lista, con un toque para agregar. Edición del umbral manual inline desde Stock.
-- **Fase 5 — Informes gráficos:** dashboard de gasto, stock y vencimientos.
+- **Fase 5 — Informes gráficos (✅ completa):** vistas `spending_by_category_30d`, `spending_by_week` y `top_products_90d` (derivadas de `purchases`/`purchase_items`, siempre frescas). Pestaña "Reportes" nueva en el nav (dashboard con 3 stat tiles, gasto por categoría en barras, evolución de gasto en línea, top productos). Se usó [Recharts](https://recharts.org) vía npm — no bloqueado, a diferencia de shadcn/ui — con la paleta categórica de referencia del skill de dataviz (orden fijo ya validado contra daltonismo, no cicla por producto) y los colores de estado ya establecidos en Fase 2 para los stat tiles. Verificado renderizando el componente con datos de ejemplo en una ruta temporal (borrada antes de commitear) para revisar visualmente barras/línea/leyenda antes de darlo por cerrado, tal como pide el paso 7 del skill.
 - **Fuera de alcance por ahora:** comparación de precios entre supermercados y presupuesto (el modelo de datos ya los deja preparados).
 
 ---

@@ -7,6 +7,7 @@ const TABS = [
   { href: "/lista", label: "Lista", icon: ListIcon },
   { href: "/stock", label: "Stock", icon: BoxIcon },
   { href: "/comprar", label: "Comprar", icon: CartIcon },
+  { href: "/reportes", label: "Reportes", icon: ChartIcon },
   { href: "/ajustes", label: "Ajustes", icon: SettingsIcon },
 ];
 
@@ -96,6 +97,17 @@ function CartIcon({ className, active }: { className?: string; active: boolean }
       <path d="M4.5 15.5h15" />
       <path d="m5 11 4-7" />
       <path d="m9 11 1 9" />
+    </svg>
+  );
+}
+
+function ChartIcon({ className, active }: { className?: string; active: boolean }) {
+  return (
+    <svg className={className} {...iconProps(active)}>
+      <path d="M3 3v16a2 2 0 0 0 2 2h16" />
+      <path d="M7 16v-4" />
+      <path d="M12 16V8" />
+      <path d="M17 16v-7" />
     </svg>
   );
 }
