@@ -217,4 +217,20 @@ El usuario pidió precarga, caché y una tarjeta de "cargando" para la primera a
 
 Verificado con `tsc --noEmit`, `npm run lint` y `npm run build` (con `rm -rf .next` antes) limpios; el build confirma que las 5 rutas siguen dinámicas (`ƒ`) como corresponde a datos por-usuario con RLS.
 
+---
+
+## Primera carga de umbrales de reposición (a pedido del usuario)
+
+Con la carga inicial de Fase 6 (1 unidad por producto, sin `low_stock_threshold`), las sugerencias "para reponer" iban a quedar vacías hasta acumular 2 bajas de stock reales por producto — comportamiento correcto pero frustrante para una primera carga. El usuario pidió poblar esos umbrales desde ahora, en base a usos y costumbres típicos de una casa de un hombre de 35, una mujer de 36 y una bebé de 1 año (más un gato, según el propio catálogo — "Piedras sanitarias para gato (Leo)").
+
+**Criterio aplicado (JUICIO, no un hecho medido)**: se clasificó cada uno de los 140 productos en dos grupos:
+- **`low_stock_threshold = 1`** ("avisar con la última unidad que queda") para 41 productos: todo lo de uso diario/muy frecuente para 2 adultos (aceite de oliva, arroz, azúcar, fideos comunes, harina, sal, pan, leche, huevos, manteca, yogur, queso rallado, yerba mate, agua mineral, pasta dental, shampoo, desodorante), lo que se dispara más al tener un bebé en casa (detergente de ropa, suavizante, lavandina, detergente lavavajillas, esponja de cocina, algodón, pañuelos descartables, papel higiénico, rollo de cocina, bolsas de basura), todo lo crítico específico de la bebé (pañales, toallitas húmedas, jabón de ropa hipoalergénico, jabón para bebé) y la arena del gato.
+- **`low_stock_threshold = 0`** ("avisar recién cuando se terminó") para los 99 restantes: condimentos y productos de compra ocasional, variantes secundarias/backup de algo ya cubierto por otro producto (para no duplicar la misma alerta dos veces), insecticidas/repelentes estacionales, etc.
+
+Se aplicó directamente en la base (`update products set low_stock_threshold = ...`, sin migración — es dato del hogar, no esquema) y se verificó contra `product_replenishment`: **41 de 140 productos** quedan marcados `should_restock = true` de entrada.
+
+**Aclaración importante**: como la carga inicial (Fase 6) puso `quantity_on_hand = 1` para todo, cualquier producto con `threshold = 1` queda "para reponer" inmediatamente — es intencional (esos 41 son justamente los que no se quiere que falten), pero significa que el usuario va a ver ~41 sugerencias apenas entre a Lista/Comprar, no una lista corta. Si alguno de esos productos en realidad tiene más de 1 unidad guardada en casa, se corrige en un toque desde Stock (+/-), igual que cualquier otro ajuste de cantidad.
+
+**Decisión de alcance**: esto se hizo como una acción de datos puntual para este hogar, no se hardcodeó la composición familiar (2 adultos + bebé) dentro de `seed_initial_stock` ni de ningún otro código reusable — esos supuestos son específicos de esta casa y no deberían aplicarse automáticamente si el hogar cambia o si otro hogar usara la misma app. Los umbrales siguen siendo 100% editables por producto desde Stock, como ya lo eran antes de esta carga.
+
 No se armó splash screen específico para iOS (`apple-touch-startup-image` por tamaño de dispositivo) — es papeleo de bajo impacto para un hogar de 2 personas; se puede sumar más adelante si se nota falta.
