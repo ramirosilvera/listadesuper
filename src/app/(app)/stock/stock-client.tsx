@@ -16,7 +16,7 @@ type Product = {
   restock_cycle_days: number | null;
   last_restocked_at: string | null;
   needs_restock: boolean;
-  cycle_alert: boolean;
+  cycle_urgency: string | null;
 };
 
 type Category = { id: string; name: string; sort_order: number };
@@ -26,9 +26,10 @@ const LAST_RESTOCK_FMT = new Intl.DateTimeFormat("es-AR", { day: "2-digit", mont
 // "Vacío" siempre se marca (0 unidades es un hecho, no depende de gusto).
 // "Bajo" depende de low_stock_threshold (cada quien configura cuánto
 // quiere tener de ese producto), de needs_restock (marca manual de "está
-// abierto y queda poco" -- Fase 25), o de cycle_alert (hace más de
-// restock_cycle_days que no se compra -- Fase 8). Las tres son distintas
-// formas de detectar lo mismo, ya unificadas en
+// abierto y queda poco" -- Fase 25), o de cycle_urgency en 'vencido'/
+// 'esta_semana' (falta poco o nada para el próximo ciclo esperado de
+// compra -- Fase 8, con margen desde Fase 29). Son distintas formas de
+// detectar lo mismo, ya unificadas en
 // product_replenishment.should_restock -- acá se reusa esa misma unión,
 // no se define "poco stock" por cuarta vez.
 //
@@ -40,10 +41,12 @@ const LAST_RESTOCK_FMT = new Intl.DateTimeFormat("es-AR", { day: "2-digit", mont
 // el conteo (nadie la corrige, es justo lo que se pidió automatizar).
 // Cycle_alert dispara la MISMA alerta visual sin tocar el número real.
 function stockLevel(
-  p: Pick<Product, "quantity_on_hand" | "low_stock_threshold" | "needs_restock" | "cycle_alert">,
+  p: Pick<Product, "quantity_on_hand" | "low_stock_threshold" | "needs_restock" | "cycle_urgency">,
 ) {
   if (p.quantity_on_hand <= 0) return "empty" as const;
-  if (p.needs_restock || p.cycle_alert) return "low" as const;
+  if (p.needs_restock || p.cycle_urgency === "vencido" || p.cycle_urgency === "esta_semana") {
+    return "low" as const;
+  }
   if (p.low_stock_threshold !== null && p.quantity_on_hand <= p.low_stock_threshold) {
     return "low" as const;
   }
@@ -443,15 +446,25 @@ export function StockClient({
               // resguardo, no como recurso principal: ningún nombre real
               // del catálogo se acerca a ese límite) y los controles bajan
               // a una fila propia.
+              // Fase 29: franjas de anticipo en vez de un aviso binario
+              // "ya se cumplió el ciclo, sí o no" -- "esta semana" da el
+              // mismo margen que antes se lograba a mano bajando el
+              // número de días configurado. "La semana que viene" es a
+              // propósito un texto neutro (ver estilo más abajo, sin
+              // ámbar): es información, no una alerta.
               const statusText = p.needs_restock
                 ? "Marcado para reponer"
-                : p.cycle_alert
+                : p.cycle_urgency === "vencido"
                   ? "Hace tiempo no lo comprás"
-                  : p.last_restocked_at
-                    ? `Última compra: ${LAST_RESTOCK_FMT.format(new Date(p.last_restocked_at))}`
-                    : p.quantity_on_hand > 0
-                      ? "Cantidad inicial (estimado)"
-                      : null;
+                  : p.cycle_urgency === "esta_semana"
+                    ? "Tocaría reponer esta semana"
+                    : p.cycle_urgency === "proxima_semana"
+                      ? "Reponer la semana que viene"
+                      : p.last_restocked_at
+                        ? `Última compra: ${LAST_RESTOCK_FMT.format(new Date(p.last_restocked_at))}`
+                        : p.quantity_on_hand > 0
+                          ? "Cantidad inicial (estimado)"
+                          : null;
               return (
                 <li
                   key={p.id}
@@ -478,7 +491,9 @@ export function StockClient({
                     {statusText && (
                       <span
                         className={
-                          p.needs_restock || p.cycle_alert
+                          p.needs_restock ||
+                          p.cycle_urgency === "vencido" ||
+                          p.cycle_urgency === "esta_semana"
                             ? "font-medium text-amber-600 dark:text-amber-400"
                             : "text-zinc-400"
                         }

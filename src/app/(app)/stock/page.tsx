@@ -55,14 +55,16 @@ export default async function StockPage() {
       .order("created_at", { ascending: false }),
     // "Hace cuanto no lo comprás" (Fase 8, restock_cycle_days): se lee acá
     // en vez de recalcularlo en el cliente para no duplicar la lógica de
-    // la vista product_replenishment -- solo se usa el motivo
-    // 'ciclo_de_compra' para marcar "bajo stock" por ciclo vencido, sin
-    // tocar quantity_on_hand (ver docs/plan.md: pedido de resetear stock a
-    // 0 automáticamente al vencer el ciclo, descartado por fabricar una
-    // cantidad que no es real -- el ciclo solo alimenta la alerta).
+    // la vista product_replenishment. cycle_urgency (Fase 29) trae la
+    // franja de anticipo (vencido/esta_semana/proxima_semana) para que
+    // Stock avise con margen, no solo cuando el ciclo ya se cumplió al
+    // 100% -- sin tocar quantity_on_hand (ver docs/plan.md: pedido de
+    // resetear stock a 0 automáticamente al vencer el ciclo, descartado
+    // por fabricar una cantidad que no es real -- el ciclo solo alimenta
+    // la alerta).
     supabase
       .from("product_replenishment")
-      .select("product_id, restock_reason")
+      .select("product_id, restock_reason, cycle_urgency")
       .eq("household_id", household.id),
   ]);
 
@@ -78,17 +80,21 @@ export default async function StockPage() {
     }
   }
 
-  const cycleAlertByProduct = new Set(
+  // cycle_urgency solo viaja para productos con motivo 'ciclo_de_compra':
+  // 'vencido'/'esta_semana' son los mismos que antes disparaban should_restock
+  // (ahora con margen), 'proxima_semana' es puramente informativo, no
+  // dispara nada -- Stock lo muestra aparte, más suave.
+  const cycleUrgencyByProduct = new Map(
     (replenishment ?? [])
-      .filter((r) => r.restock_reason === "ciclo_de_compra")
-      .map((r) => r.product_id),
+      .filter((r) => r.product_id && r.cycle_urgency)
+      .map((r) => [r.product_id as string, r.cycle_urgency as string]),
   );
 
   const rows = (products ?? []).map((p) => ({
     ...p,
     quantity_on_hand: stockByProduct.get(p.id) ?? 0,
     last_restocked_at: lastRestockByProduct.get(p.id) ?? null,
-    cycle_alert: cycleAlertByProduct.has(p.id),
+    cycle_urgency: cycleUrgencyByProduct.get(p.id) ?? null,
   }));
 
   // La vista product_expirations_upcoming no tiene una PK declarada para

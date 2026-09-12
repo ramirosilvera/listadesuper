@@ -675,6 +675,7 @@ export type Database = {
       product_replenishment: {
         Row: {
           avg_daily_consumption: number | null
+          cycle_urgency: string | null
           days_since_last_restock: number | null
           estimated_days_remaining: number | null
           household_id: string | null
