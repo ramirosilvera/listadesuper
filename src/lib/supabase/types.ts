@@ -597,6 +597,23 @@ export type Database = {
       }
     }
     Views: {
+      my_membership: {
+        Row: {
+          household_id: string | null
+          household_invite_code: string | null
+          household_name: string | null
+          role: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "household_members_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "households"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_expirations_upcoming: {
         Row: {
           days_until: number | null
