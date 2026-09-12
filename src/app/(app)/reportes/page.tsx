@@ -58,7 +58,9 @@ export default async function ReportesPage() {
     supabase
       .from("product_suggestions")
       .select("product_id, name, suggestion_type, current_value, suggested_value, evidence_count, reason")
-      .eq("household_id", household.id),
+      .eq("household_id", household.id)
+      .order("suggestion_type", { ascending: true })
+      .order("name", { ascending: true }),
   ]);
 
   const totalSpend30d = (byCategory ?? []).reduce(

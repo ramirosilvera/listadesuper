@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Card } from "@/components/ui";
 
@@ -48,8 +49,11 @@ export function SuggestionsPanel({
   suggestions: ProductSuggestion[];
 }) {
   const supabase = useMemo(() => createClient(), []);
+  const router = useRouter();
   const [suggestions, setSuggestions] = useState(initial);
   const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [confirmKey, setConfirmKey] = useState<string | null>(null);
+  const [errorKey, setErrorKey] = useState<string | null>(null);
 
   const grouped = useMemo(() => {
     const order: ProductSuggestion["suggestion_type"][] = [
@@ -68,9 +72,14 @@ export function SuggestionsPanel({
 
   function remove(s: ProductSuggestion) {
     setSuggestions((prev) => prev.filter((x) => key(x) !== key(s)));
+    // El badge de cantidad en la pestaña se calcula en el server
+    // (reportes/page.tsx) y llega como prop — sin esto quedaba
+    // desactualizado hasta la próxima navegación completa.
+    router.refresh();
   }
 
   async function apply(s: ProductSuggestion) {
+    setErrorKey(null);
     setBusyKey(key(s));
     const { error } = await supabase.rpc("apply_product_suggestion", {
       p_product_id: s.product_id,
@@ -78,10 +87,16 @@ export function SuggestionsPanel({
       p_value: s.suggested_value ?? undefined,
     });
     setBusyKey(null);
-    if (!error) remove(s);
+    setConfirmKey(null);
+    if (error) {
+      setErrorKey(key(s));
+    } else {
+      remove(s);
+    }
   }
 
   async function dismiss(s: ProductSuggestion) {
+    setErrorKey(null);
     setBusyKey(key(s));
     const { error } = await supabase.rpc("dismiss_product_suggestion", {
       p_product_id: s.product_id,
@@ -89,7 +104,11 @@ export function SuggestionsPanel({
       p_value: s.suggested_value ?? undefined,
     });
     setBusyKey(null);
-    if (!error) remove(s);
+    if (error) {
+      setErrorKey(key(s));
+    } else {
+      remove(s);
+    }
   }
 
   if (suggestions.length === 0) {
@@ -111,9 +130,12 @@ export function SuggestionsPanel({
           </h2>
           <ul className="flex flex-col gap-2">
             {group.items.map((s) => {
-              const busy = busyKey === key(s);
+              const k = key(s);
+              const busy = busyKey === k;
+              const needsConfirm = s.suggestion_type === "archivar";
+              const confirming = confirmKey === k;
               return (
-                <li key={key(s)}>
+                <li key={k}>
                   <Card className="flex flex-col gap-2 p-4">
                     <div>
                       <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50">
@@ -121,24 +143,58 @@ export function SuggestionsPanel({
                       </p>
                       <p className="text-xs text-zinc-500">{s.reason}</p>
                     </div>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => apply(s)}
-                        className="min-h-9 flex-1 select-none touch-manipulation rounded-full bg-[#16A34A] px-3 text-xs font-medium text-white active:bg-[#15803D] disabled:opacity-50"
-                      >
-                        {busy ? "Aplicando…" : GROUP_META[group.type].applyLabel(s)}
-                      </button>
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => dismiss(s)}
-                        className="min-h-9 select-none touch-manipulation rounded-full px-3 text-xs text-zinc-500 active:bg-zinc-100 disabled:opacity-50 dark:active:bg-zinc-900"
-                      >
-                        Descartar
-                      </button>
-                    </div>
+
+                    {errorKey === k && (
+                      <p className="text-xs text-red-600 dark:text-red-400">
+                        No se pudo aplicar. Probá de nuevo.
+                      </p>
+                    )}
+
+                    {confirming ? (
+                      <div className="flex flex-wrap items-center gap-2 rounded-lg bg-red-50 px-2.5 py-2 text-xs text-red-800 dark:bg-red-950 dark:text-red-300">
+                        <span className="flex-1">
+                          ¿Archivar &quot;{s.name}&quot;? Deja de aparecer en
+                          Stock y en sugeridos para reponer (se puede
+                          reactivar después desde Ajustes).
+                        </span>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => apply(s)}
+                          className="min-h-8 select-none touch-manipulation rounded-full bg-red-600 px-3 text-xs font-medium text-white active:bg-red-700 disabled:opacity-50"
+                        >
+                          {busy ? "Archivando…" : "Sí, archivar"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setConfirmKey(null)}
+                          className="min-h-8 select-none touch-manipulation rounded-full px-2 text-xs text-red-700 dark:text-red-300"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() =>
+                            needsConfirm ? setConfirmKey(k) : apply(s)
+                          }
+                          className="min-h-9 flex-1 select-none touch-manipulation rounded-full bg-[#16A34A] px-3 text-xs font-medium text-white active:bg-[#15803D] disabled:opacity-50"
+                        >
+                          {busy ? "Aplicando…" : GROUP_META[group.type].applyLabel(s)}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => dismiss(s)}
+                          className="min-h-9 select-none touch-manipulation rounded-full px-3 text-xs text-zinc-500 active:bg-zinc-100 disabled:opacity-50 dark:active:bg-zinc-900"
+                        >
+                          Descartar
+                        </button>
+                      </div>
+                    )}
                   </Card>
                 </li>
               );
