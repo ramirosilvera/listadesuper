@@ -202,7 +202,9 @@ export function VencimientosTab({
                       value={dateDraft}
                       onChange={(e) => setDateDraft(e.target.value)}
                       onBlur={() => saveDate(exp.id)}
-                      className="h-8 rounded-lg border border-zinc-300 px-2 text-sm text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+                      // text-base (16px), no text-sm: en iOS Safari un
+                      // input mas chico hace auto-zoom al tocarlo.
+                      className="h-9 rounded-lg border border-zinc-300 px-2 text-base text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
                       aria-label={`Fecha de vencimiento de ${exp.product_name}`}
                     />
                   </div>

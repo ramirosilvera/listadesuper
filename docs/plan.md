@@ -705,6 +705,18 @@ Se unificó la definición de "bajo stock" en una sola función (`stockLevel`, r
 
 ---
 
+## "No quiero que me haga zoom la pantalla"
+
+Pedido corto pero con dos interpretaciones posibles, distinguidas antes de tocar nada: **pinch-to-zoom** (el usuario agranda con dos dedos) vs. **auto-zoom de iOS Safari al tocar un campo de formulario** (el navegador agranda solo la pantalla cuando el texto del campo enfocado mide menos de 16px). Son problemas distintos con arreglos distintos.
+
+Se revisó `src/app/layout.tsx`: el `viewport` ya tiene un comentario explícito de una ronda anterior explicando que NO se fija `maximum-scale`/`user-scalable=no` a propósito, porque bloquear el pinch-to-zoom del usuario es un problema de accesibilidad (WCAG 1.4.4 — alguien con baja visión depende de poder agrandar la pantalla). Esa decisión se mantuvo sin tocar: no es el tipo de "zoom" que tiene sentido eliminar.
+
+**Lo que sí se corrigió**: se auditaron todos los `<input>`/`<select>` reales de la app (no los que ya usan el componente compartido `<Input>`, que ya usa `text-base`) y se encontraron 7 con texto por debajo de 16px (`text-sm` = 14px, `text-xs` = 12px) — el umbral exacto que dispara el auto-zoom de iOS Safari al enfocarlos: el selector de categoría en Stock, el campo de nombre y el selector de categoría del panel de ajustes de cada producto, la fecha de vencimiento editable en Vencimientos, el selector de categoría al agregar un producto nuevo en Comprar y en Lista, y la fecha de vencimiento editable en Comprar. Uno de los inputs de Comprar (cantidad) ya tenía este mismo arreglo aplicado con un comentario explicando el motivo desde una ronda anterior — la inconsistencia era justamente que no se había aplicado en todos los demás controles. Se llevaron los 7 a `text-base` (16px), ajustando la altura de los más chicos (`h-8` → `h-9`) para que el texto más grande siga entrando cómodo.
+
+**Verificado**: `npm run build`/`npm run lint` limpios. Sin cambios de base de datos. No se puede confirmar en un dispositivo iOS real dentro de este entorno (limitación ya declarada en rondas anteriores de esta sesión) — la corrección se basa en el umbral de 16px, que es el comportamiento documentado y ampliamente conocido de iOS Safari, no una prueba end-to-end en un teléfono real.
+
+---
+
 ## Fase 24: eliminar definitivamente productos archivados
 
 Pedido del usuario, con motivo concreto: hay productos del import inicial (Fase 1) archivados por ser duplicados, ambiguos o incompletos, y "no tiene sentido archivarlos para siempre". Roles: integridad de datos (qué se pierde realmente al borrar) y seguridad/RLS (dónde debe vivir la restricción).

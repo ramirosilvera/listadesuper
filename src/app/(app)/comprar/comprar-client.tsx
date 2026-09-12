@@ -292,7 +292,9 @@ export function ComprarClient({
                   value={newProductCategoryId}
                   onChange={(e) => setNewProductCategoryId(e.target.value)}
                   onClick={(e) => e.stopPropagation()}
-                  className="h-8 min-w-0 flex-1 rounded-lg border border-zinc-300 bg-white px-2 text-xs text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+                  // text-base (16px), no text-xs: en iOS Safari un select
+                  // mas chico hace auto-zoom al tocarlo.
+                  className="h-9 min-w-0 flex-1 rounded-lg border border-zinc-300 bg-white px-2 text-base text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
                 >
                   <option value="">Sin categoría (Otros)</option>
                   {categories.map((c) => (
@@ -423,7 +425,9 @@ export function ComprarClient({
                   type="date"
                   value={row.expiration_date}
                   onChange={(e) => updateRow(row.key, { expiration_date: e.target.value })}
-                  className="h-9 rounded-lg border border-zinc-300 px-2 text-sm text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+                  // text-base (16px), no text-sm: en iOS Safari un input
+                  // mas chico hace auto-zoom al tocarlo.
+                  className="h-9 rounded-lg border border-zinc-300 px-2 text-base text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
                   aria-label={`Fecha de vencimiento de ${row.name}`}
                 />
               </label>

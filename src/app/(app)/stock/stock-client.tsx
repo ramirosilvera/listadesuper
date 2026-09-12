@@ -311,7 +311,10 @@ export function StockClient({
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
-            className="h-10 min-w-0 flex-1 rounded-lg border border-zinc-300 bg-white px-2.5 text-sm text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+            // text-base (16px), no text-sm: un control mas chico hace que
+            // iOS Safari haga auto-zoom al tocarlo (mismo motivo que ya
+            // documenta comprar-client.tsx en el input de cantidad).
+            className="h-10 min-w-0 flex-1 rounded-lg border border-zinc-300 bg-white px-2.5 text-base text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
           >
             <option value="">Todas las categorías</option>
             {categoryChips.map((c) => (
@@ -518,7 +521,7 @@ export function StockClient({
                           setRenameError(null);
                           setRenameConfirm(null);
                         }}
-                        className="h-9 min-w-0 flex-1 rounded-lg border border-zinc-300 px-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                        className="h-9 min-w-0 flex-1 rounded-lg border border-zinc-300 px-2 text-base dark:border-zinc-700 dark:bg-zinc-900"
                       />
                     </label>
                     {renameError && (
@@ -529,7 +532,7 @@ export function StockClient({
                       <select
                         value={categoryDraft}
                         onChange={(e) => setCategoryDraft(e.target.value)}
-                        className="h-9 flex-1 rounded-lg border border-zinc-300 bg-white px-2 text-sm text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+                        className="h-9 flex-1 rounded-lg border border-zinc-300 bg-white px-2 text-base text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
                       >
                         <option value="">Sin categoría (Otros)</option>
                         {categories.map((c) => (
