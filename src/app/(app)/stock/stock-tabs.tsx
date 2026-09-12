@@ -13,6 +13,7 @@ type Product = {
   low_stock_threshold: number | null;
   restock_cycle_days: number | null;
   last_restocked_at: string | null;
+  needs_restock: boolean;
 };
 
 type Category = { id: string; name: string; sort_order: number };

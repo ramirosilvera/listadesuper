@@ -19,7 +19,9 @@ export default async function StockPage() {
   ] = await Promise.all([
     supabase
       .from("products")
-      .select("id, name, unit_label, category_id, low_stock_threshold, restock_cycle_days")
+      .select(
+        "id, name, unit_label, category_id, low_stock_threshold, restock_cycle_days, needs_restock",
+      )
       .eq("household_id", household.id)
       .eq("archived", false)
       .order("name", { ascending: true }),

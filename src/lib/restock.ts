@@ -3,6 +3,8 @@
 // product_replenishment (columna restock_reason) para la lógica real.
 export function restockReasonLabel(reason: string | null): string {
   switch (reason) {
+    case "marcado_manual":
+      return "lo marcaste para reponer";
     case "prediccion":
       return "se está por acabar";
     case "umbral_manual":

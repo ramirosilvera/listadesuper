@@ -241,6 +241,7 @@ export type Database = {
           id: string
           low_stock_threshold: number | null
           name: string
+          needs_restock: boolean
           notes: string | null
           restock_cycle_days: number | null
           unit_label: string
@@ -255,6 +256,7 @@ export type Database = {
           id?: string
           low_stock_threshold?: number | null
           name: string
+          needs_restock?: boolean
           notes?: string | null
           restock_cycle_days?: number | null
           unit_label?: string
@@ -269,6 +271,7 @@ export type Database = {
           id?: string
           low_stock_threshold?: number | null
           name?: string
+          needs_restock?: boolean
           notes?: string | null
           restock_cycle_days?: number | null
           unit_label?: string

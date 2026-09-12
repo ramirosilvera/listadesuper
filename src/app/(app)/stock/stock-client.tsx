@@ -15,6 +15,7 @@ type Product = {
   low_stock_threshold: number | null;
   restock_cycle_days: number | null;
   last_restocked_at: string | null;
+  needs_restock: boolean;
 };
 
 type Category = { id: string; name: string; sort_order: number };
@@ -22,16 +23,20 @@ type Category = { id: string; name: string; sort_order: number };
 const LAST_RESTOCK_FMT = new Intl.DateTimeFormat("es-AR", { day: "2-digit", month: "2-digit" });
 
 // "Vacío" siempre se marca (0 unidades es un hecho, no depende de gusto).
-// "Bajo" en cambio depende de low_stock_threshold, que cada quien
-// configura según cuánto quiere tener de ese producto -- sin threshold
-// configurado, no hay forma de saber si 1 unidad es "poco" o es
-// exactamente lo que se quiere tener (ej. "no quiero más de 1 aceite de
-// oliva genérico"), así que no se marca "bajo" por una regla fija como
-// <=1. Mismo criterio que ya usa product_replenishment.should_restock
-// (Fase 8) para el aviso de reposición -- no una tercera definición de
-// "poco stock" distinta a la que ya existe en el resto de la app.
-function stockLevel(p: Pick<Product, "quantity_on_hand" | "low_stock_threshold">) {
+// "Bajo" depende de low_stock_threshold (cada quien configura cuánto
+// quiere tener de ese producto) O de needs_restock, la marca manual de
+// "está abierto y queda poco" -- para productos donde a propósito no se
+// quiere tener más de 1 unidad (ej. "no quiero más de 1 aceite de oliva
+// genérico"), quantity_on_hand se queda fijo en 1 mientras la botella
+// abierta se vacía, sin que ningún número lo refleje. Mismo criterio que
+// ya usa product_replenishment.should_restock (Fases 8 y 25) para el
+// aviso de reposición -- no una cuarta definición distinta de "poco
+// stock" a la que ya existe en el resto de la app.
+function stockLevel(
+  p: Pick<Product, "quantity_on_hand" | "low_stock_threshold" | "needs_restock">,
+) {
   if (p.quantity_on_hand <= 0) return "empty" as const;
+  if (p.needs_restock) return "low" as const;
   if (p.low_stock_threshold !== null && p.quantity_on_hand <= p.low_stock_threshold) {
     return "low" as const;
   }
@@ -269,6 +274,26 @@ export function StockClient({
     setRenameConfirm({ id: product.id, newName: trimmedName });
   }
 
+  // Toggle de un solo toque, sin confirmación: a diferencia de renombrar
+  // o archivar, marcar/desmarcar "para reponer" no reescribe historial ni
+  // saca nada del catálogo -- es totalmente reversible con el mismo toque,
+  // así que no amerita la fricción de un paso de confirmación.
+  async function toggleNeedsRestock(product: Product) {
+    const next = !product.needs_restock;
+    setProducts((prev) =>
+      prev.map((p) => (p.id === product.id ? { ...p, needs_restock: next } : p)),
+    );
+    const { error } = await supabase
+      .from("products")
+      .update({ needs_restock: next })
+      .eq("id", product.id);
+    if (error) {
+      setProducts((prev) =>
+        prev.map((p) => (p.id === product.id ? { ...p, needs_restock: product.needs_restock } : p)),
+      );
+    }
+  }
+
   // Soft delete: products.archived (no un DELETE real) para no perder el
   // historial de compras/gastos de ese producto en Reportes. Deja de
   // aparecer en Stock, en las sugerencias de reposición y en Vencimientos.
@@ -418,6 +443,11 @@ export function StockClient({
                         </p>
                       )
                     )}
+                    {p.needs_restock && (
+                      <p className="text-xs font-medium text-amber-600 dark:text-amber-400">
+                        Marcado para reponer
+                      </p>
+                    )}
                     {!isEditingSettings && settingsSummary && (
                       <button
                         type="button"
@@ -456,6 +486,27 @@ export function StockClient({
                       </span>
                     </button>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => toggleNeedsRestock(p)}
+                    aria-label={
+                      p.needs_restock
+                        ? `Ya no marcar "${p.name}" para reponer`
+                        : `Marcar "${p.name}" para reponer (abierto, queda poco)`
+                    }
+                    aria-pressed={p.needs_restock}
+                    className="flex h-9 w-9 shrink-0 select-none items-center justify-center"
+                  >
+                    {p.needs_restock ? (
+                      <span className="flex h-6 w-6 items-center justify-center rounded-md bg-amber-500 text-white">
+                        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M20 6 9 17l-5-5" />
+                        </svg>
+                      </span>
+                    ) : (
+                      <span className="h-6 w-6 rounded-md border-2 border-zinc-300 dark:border-zinc-700" />
+                    )}
+                  </button>
                   <button
                     type="button"
                     onClick={() =>
