@@ -159,12 +159,64 @@ export type Database = {
             referencedRelation: "top_products_90d"
             referencedColumns: ["product_id"]
           },
+        ]
+      }
+      product_suggestion_dismissals: {
+        Row: {
+          dismissed_at: string
+          dismissed_by: string | null
+          dismissed_value: number | null
+          household_id: string
+          id: string
+          product_id: string
+          suggestion_type: string
+        }
+        Insert: {
+          dismissed_at?: string
+          dismissed_by?: string | null
+          dismissed_value?: number | null
+          household_id: string
+          id?: string
+          product_id: string
+          suggestion_type: string
+        }
+        Update: {
+          dismissed_at?: string
+          dismissed_by?: string | null
+          dismissed_value?: number | null
+          household_id?: string
+          id?: string
+          product_id?: string
+          suggestion_type?: string
+        }
+        Relationships: [
           {
-            foreignKeyName: "product_expirations_purchase_item_id_fkey"
-            columns: ["purchase_item_id"]
+            foreignKeyName: "product_suggestion_dismissals_household_id_fkey"
+            columns: ["household_id"]
             isOneToOne: false
-            referencedRelation: "purchase_items"
+            referencedRelation: "households"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_suggestion_dismissals_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "product_replenishment"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_suggestion_dismissals_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_suggestion_dismissals_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "top_products_90d"
+            referencedColumns: ["product_id"]
           },
         ]
       }
@@ -652,6 +704,19 @@ export type Database = {
           },
         ]
       }
+      product_suggestions: {
+        Row: {
+          current_value: number | null
+          evidence_count: number | null
+          household_id: string | null
+          name: string | null
+          product_id: string | null
+          reason: string | null
+          suggested_value: number | null
+          suggestion_type: string | null
+        }
+        Relationships: []
+      }
       spending_by_category_30d: {
         Row: {
           category_id: string | null
@@ -716,7 +781,23 @@ export type Database = {
         }
         Returns: string
       }
+      apply_product_suggestion: {
+        Args: {
+          p_product_id: string
+          p_suggestion_type: string
+          p_value?: number
+        }
+        Returns: undefined
+      }
       create_household: { Args: { p_name: string }; Returns: string }
+      dismiss_product_suggestion: {
+        Args: {
+          p_product_id: string
+          p_suggestion_type: string
+          p_value?: number
+        }
+        Returns: undefined
+      }
       generate_invite_code: { Args: never; Returns: string }
       join_household_by_code: {
         Args: { p_invite_code: string }

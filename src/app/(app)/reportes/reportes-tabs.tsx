@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ReportesClient } from "./reportes-client";
 import { PurchaseHistory } from "./purchase-history";
+import { SuggestionsPanel, type ProductSuggestion } from "./suggestions-panel";
 
 type CategorySpend = {
   category_id: string | null;
@@ -43,6 +44,7 @@ export function ReportesTabs({
   urgentExpirations,
   restockCount,
   purchases,
+  suggestions,
 }: {
   totalSpend30d: number;
   byCategory: CategorySpend[];
@@ -51,8 +53,9 @@ export function ReportesTabs({
   urgentExpirations: number;
   restockCount: number;
   purchases: Purchase[];
+  suggestions: ProductSuggestion[];
 }) {
-  const [tab, setTab] = useState<"resumen" | "historial">("resumen");
+  const [tab, setTab] = useState<"resumen" | "historial" | "sugerencias">("resumen");
 
   return (
     <div className="flex flex-col gap-4">
@@ -71,9 +74,21 @@ export function ReportesTabs({
         >
           Historial
         </button>
+        <button
+          type="button"
+          onClick={() => setTab("sugerencias")}
+          className={`relative flex-1 select-none touch-manipulation rounded-full py-2 transition-colors ${tab === "sugerencias" ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50" : "text-zinc-500"}`}
+        >
+          Sugerencias
+          {suggestions.length > 0 && (
+            <span className="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[#16A34A] px-1 text-[10px] font-semibold text-white">
+              {suggestions.length}
+            </span>
+          )}
+        </button>
       </div>
 
-      {tab === "resumen" ? (
+      {tab === "resumen" && (
         <ReportesClient
           totalSpend30d={totalSpend30d}
           byCategory={byCategory}
@@ -82,9 +97,9 @@ export function ReportesTabs({
           urgentExpirations={urgentExpirations}
           restockCount={restockCount}
         />
-      ) : (
-        <PurchaseHistory purchases={purchases} />
       )}
+      {tab === "historial" && <PurchaseHistory purchases={purchases} />}
+      {tab === "sugerencias" && <SuggestionsPanel suggestions={suggestions} />}
     </div>
   );
 }

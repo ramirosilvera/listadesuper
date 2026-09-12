@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getActiveHousehold } from "@/lib/household";
 import { createClient } from "@/lib/supabase/server";
 import { ReportesTabs } from "./reportes-tabs";
+import type { ProductSuggestion } from "./suggestions-panel";
 
 export default async function ReportesPage() {
   const { user, household } = await getActiveHousehold();
@@ -17,6 +18,7 @@ export default async function ReportesPage() {
     { data: expirationsUpcoming },
     { data: replenishment },
     { data: purchases },
+    { data: suggestions },
   ] = await Promise.all([
     supabase
       .from("spending_by_category_30d")
@@ -53,6 +55,10 @@ export default async function ReportesPage() {
       .eq("household_id", household.id)
       .order("purchased_at", { ascending: false })
       .limit(30),
+    supabase
+      .from("product_suggestions")
+      .select("product_id, name, suggestion_type, current_value, suggested_value, evidence_count, reason")
+      .eq("household_id", household.id),
   ]);
 
   const totalSpend30d = (byCategory ?? []).reduce(
@@ -72,6 +78,11 @@ export default async function ReportesPage() {
       urgentExpirations={urgentExpirations}
       restockCount={(replenishment ?? []).length}
       purchases={purchases ?? []}
+      suggestions={
+        (suggestions ?? [])
+          .filter((s) => s.product_id && s.name && s.suggestion_type && s.reason)
+          .map((s) => s as unknown as ProductSuggestion)
+      }
     />
   );
 }
