@@ -12,9 +12,12 @@ type Product = {
   quantity_on_hand: number;
   low_stock_threshold: number | null;
   restock_cycle_days: number | null;
+  last_restocked_at: string | null;
 };
 
 type Category = { id: string; name: string; sort_order: number };
+
+const LAST_RESTOCK_FMT = new Intl.DateTimeFormat("es-AR", { day: "2-digit", month: "2-digit" });
 
 export function StockClient({
   householdId,
@@ -187,6 +190,11 @@ export function StockClient({
                   />
                   <div className="min-w-0 flex-1">
                     <p className="text-sm text-zinc-900 dark:text-zinc-50">{p.name}</p>
+                    {p.last_restocked_at && (
+                      <p className="text-xs text-zinc-400">
+                        Última compra: {LAST_RESTOCK_FMT.format(new Date(p.last_restocked_at))}
+                      </p>
+                    )}
                     {!isEditingSettings && settingsSummary && (
                       <button
                         type="button"

@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getActiveHousehold } from "@/lib/household";
 import { createClient } from "@/lib/supabase/server";
-import { ReportesClient } from "./reportes-client";
+import { ReportesTabs } from "./reportes-tabs";
 
 export default async function ReportesPage() {
   const { user, household } = await getActiveHousehold();
@@ -16,6 +16,7 @@ export default async function ReportesPage() {
     { data: topProducts },
     { data: expirationsUpcoming },
     { data: replenishment },
+    { data: purchases },
   ] = await Promise.all([
     supabase
       .from("spending_by_category_30d")
@@ -40,6 +41,18 @@ export default async function ReportesPage() {
       .select("product_id, should_restock")
       .eq("household_id", household.id)
       .eq("should_restock", true),
+    // "Historial": no existe un concepto de "lista semanal" propio (la
+    // lista compartida es una sola, continua) — cada fila de purchases
+    // es lo más parecido a "la compra de esa semana", así que es lo que
+    // se muestra como historial.
+    supabase
+      .from("purchases")
+      .select(
+        "id, purchased_at, total_amount, stores(name), purchase_items(id, quantity, unit_price, subtotal, products(name, unit_label))",
+      )
+      .eq("household_id", household.id)
+      .order("purchased_at", { ascending: false })
+      .limit(30),
   ]);
 
   const totalSpend30d = (byCategory ?? []).reduce(
@@ -51,13 +64,14 @@ export default async function ReportesPage() {
   ).length;
 
   return (
-    <ReportesClient
+    <ReportesTabs
       totalSpend30d={totalSpend30d}
       byCategory={byCategory ?? []}
       byWeek={byWeek ?? []}
       topProducts={topProducts ?? []}
       urgentExpirations={urgentExpirations}
       restockCount={(replenishment ?? []).length}
+      purchases={purchases ?? []}
     />
   );
 }

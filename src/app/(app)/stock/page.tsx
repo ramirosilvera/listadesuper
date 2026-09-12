@@ -10,36 +10,49 @@ export default async function StockPage() {
 
   const supabase = await createClient();
 
-  const [{ data: products }, { data: stock }, { data: categories }, { data: expirations }] =
-    await Promise.all([
-      supabase
-        .from("products")
-        .select("id, name, unit_label, category_id, low_stock_threshold, restock_cycle_days")
-        .eq("household_id", household.id)
-        .eq("archived", false)
-        .order("name", { ascending: true }),
-      supabase
-        .from("product_stock")
-        .select("product_id, quantity_on_hand")
-        .eq("household_id", household.id),
-      supabase
-        .from("categories")
-        .select("id, name, sort_order")
-        .eq("household_id", household.id)
-        .order("sort_order", { ascending: true }),
-      supabase
-        .from("product_expirations_upcoming")
-        .select("id, product_name, unit_label, expiration_date, quantity, days_until, level")
-        .eq("household_id", household.id),
-    ]);
+  const [
+    { data: products },
+    { data: stock },
+    { data: categories },
+    { data: expirations },
+    { data: replenishment },
+  ] = await Promise.all([
+    supabase
+      .from("products")
+      .select("id, name, unit_label, category_id, low_stock_threshold, restock_cycle_days")
+      .eq("household_id", household.id)
+      .eq("archived", false)
+      .order("name", { ascending: true }),
+    supabase
+      .from("product_stock")
+      .select("product_id, quantity_on_hand")
+      .eq("household_id", household.id),
+    supabase
+      .from("categories")
+      .select("id, name, sort_order")
+      .eq("household_id", household.id)
+      .order("sort_order", { ascending: true }),
+    supabase
+      .from("product_expirations_upcoming")
+      .select("id, product_name, unit_label, expiration_date, quantity, days_until, level")
+      .eq("household_id", household.id),
+    supabase
+      .from("product_replenishment")
+      .select("product_id, last_restocked_at")
+      .eq("household_id", household.id),
+  ]);
 
   const stockByProduct = new Map(
     (stock ?? []).map((s) => [s.product_id, s.quantity_on_hand ?? 0]),
+  );
+  const lastRestockByProduct = new Map(
+    (replenishment ?? []).map((r) => [r.product_id, r.last_restocked_at]),
   );
 
   const rows = (products ?? []).map((p) => ({
     ...p,
     quantity_on_hand: stockByProduct.get(p.id) ?? 0,
+    last_restocked_at: lastRestockByProduct.get(p.id) ?? null,
   }));
 
   // La vista product_expirations_upcoming no tiene una PK declarada para

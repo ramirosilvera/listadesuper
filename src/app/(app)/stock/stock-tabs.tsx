@@ -12,6 +12,7 @@ type Product = {
   quantity_on_hand: number;
   low_stock_threshold: number | null;
   restock_cycle_days: number | null;
+  last_restocked_at: string | null;
 };
 
 type Category = { id: string; name: string; sort_order: number };

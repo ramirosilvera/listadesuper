@@ -367,3 +367,19 @@ Fuentes consultadas (USDA FoodKeeper y fuentes que lo citan directamente):
 - [survivalfreedom.com — How Long Does Butter Last? (USDA Guidelines)](https://survivalfreedom.com/how-long-does-butter-last/)
 - [pantryprofessor.com — How Long Does Mayonnaise (Opened) Last?](https://pantryprofessor.com/food-storage/mayo/)
 - [onbetterliving.com / mill.com — Cheese, yogurt, heavy cream shelf life after opening](https://www.mill.com/blog/how-long-does-cheese-last-in-the-fridge)
+
+---
+
+## Historial de compras (a pedido del usuario)
+
+El usuario preguntó dónde ver las fechas de compra de cada producto, o el historial de cada "lista semanal". Al revisar, era un hueco real: esa información existe en la base (`purchases`, `purchase_items`, y `last_restocked_at` ya calculado en `product_replenishment` desde Fase 8) pero no se mostraba en ningún lado de la UI.
+
+**Hecho confirmado al revisar los datos**: ya hay 3 compras reales cargadas por la familia (Azúcar/Blem pisos/Cif crema en "Día"; Enjuague bucal; Pizza Sibarita) — la pregunta no era hipotética, ya la habían usado y no encontraban dónde volver a verla.
+
+**Aclaración de modelo de datos importante**: no existe un objeto "lista semanal" en el esquema — la lista compartida (`shopping_lists`) es una sola, continua, y nunca se archiva ni se crea una nueva por semana (eso ya era así desde Fase 1, no es algo nuevo de este cambio). Lo más parecido a "la lista de esta semana" que sí existe es cada fila de `purchases`: un registro con fecha, súper y los productos de esa compra puntual. Se usó eso, no se inventó un concepto nuevo de "semana".
+
+**Cambios**:
+- **Stock**: cada producto ahora muestra "Última compra: DD/MM" (dato ya calculado en `product_replenishment`, solo faltaba mostrarlo) cuando hay alguna.
+- **Reportes**: se le agregaron pestañas ("Resumen" / "Historial", mismo patrón que Stock/Vencimientos). "Historial" lista las compras más recientes (fecha, súper, cantidad de productos, total si se cargó precio) y cada una se puede tocar para expandir el detalle línea por línea.
+
+Sin cambios de esquema — reutiliza `purchases`/`purchase_items`/`stores` tal cual y el `last_restocked_at` de Fase 8. Verificado con `tsc --noEmit`, `npm run lint` y `npm run build` limpios.
