@@ -11,6 +11,7 @@ type Product = {
   category_id: string | null;
   quantity_on_hand: number;
   low_stock_threshold: number | null;
+  restock_cycle_days: number | null;
 };
 
 type Category = { id: string; name: string; sort_order: number };
@@ -29,6 +30,8 @@ export function StockClient({
   const [query, setQuery] = useState("");
   const [editingThresholdId, setEditingThresholdId] = useState<string | null>(null);
   const [thresholdDraft, setThresholdDraft] = useState("");
+  const [editingCycleId, setEditingCycleId] = useState<string | null>(null);
+  const [cycleDraft, setCycleDraft] = useState("");
   const [confirmArchiveId, setConfirmArchiveId] = useState<string | null>(null);
   const [archiving, setArchiving] = useState<string | null>(null);
 
@@ -96,6 +99,34 @@ export function StockClient({
       .eq("id", product.id);
   }
 
+  function startEditingCycle(product: Product) {
+    setEditingCycleId(product.id);
+    setCycleDraft(
+      product.restock_cycle_days !== null ? String(product.restock_cycle_days) : "",
+    );
+  }
+
+  // Ciclo de compra: control adicional a la cantidad en stock. Sirve para
+  // productos que se compran por hábito en un intervalo mas o menos fijo
+  // (ej. aceite de oliva 1 vez por mes) independientemente de cuantas
+  // unidades queden — y como red por si se olvidan de actualizar el stock
+  // a mano. Ver vista product_replenishment (columna restock_reason
+  // 'ciclo_de_compra').
+  async function saveCycle(product: Product) {
+    const parsed = cycleDraft.trim() === "" ? null : Number(cycleDraft);
+    const value = parsed !== null && !isNaN(parsed) && parsed > 0 ? parsed : null;
+
+    setProducts((prev) =>
+      prev.map((p) => (p.id === product.id ? { ...p, restock_cycle_days: value } : p)),
+    );
+    setEditingCycleId(null);
+
+    await supabase
+      .from("products")
+      .update({ restock_cycle_days: value })
+      .eq("id", product.id);
+  }
+
   // Soft delete: products.archived (no un DELETE real) para no perder el
   // historial de compras/gastos de ese producto en Reportes. Deja de
   // aparecer en Stock, en las sugerencias de reposición y en Vencimientos.
@@ -141,6 +172,7 @@ export function StockClient({
                     ? "low"
                     : "ok";
               const isEditingThreshold = editingThresholdId === p.id;
+              const isEditingCycle = editingCycleId === p.id;
               return (
                 <li
                   key={p.id}
@@ -159,17 +191,30 @@ export function StockClient({
                   />
                   <div className="min-w-0 flex-1">
                     <p className="text-sm text-zinc-900 dark:text-zinc-50">{p.name}</p>
-                    {!isEditingThreshold && (
-                      <button
-                        type="button"
-                        onClick={() => startEditingThreshold(p)}
-                        className="text-xs text-zinc-400 underline decoration-dotted active:text-zinc-600 dark:active:text-zinc-300"
-                      >
-                        {p.low_stock_threshold !== null
-                          ? `Avisar con ${p.low_stock_threshold} o menos`
-                          : "Avisar con poco stock"}
-                      </button>
-                    )}
+                    <div className="flex flex-wrap gap-x-2">
+                      {!isEditingThreshold && (
+                        <button
+                          type="button"
+                          onClick={() => startEditingThreshold(p)}
+                          className="text-xs text-zinc-400 underline decoration-dotted active:text-zinc-600 dark:active:text-zinc-300"
+                        >
+                          {p.low_stock_threshold !== null
+                            ? `Avisar con ${p.low_stock_threshold} o menos`
+                            : "Avisar con poco stock"}
+                        </button>
+                      )}
+                      {!isEditingCycle && (
+                        <button
+                          type="button"
+                          onClick={() => startEditingCycle(p)}
+                          className="text-xs text-zinc-400 underline decoration-dotted active:text-zinc-600 dark:active:text-zinc-300"
+                        >
+                          {p.restock_cycle_days !== null
+                            ? `Se compra cada ${p.restock_cycle_days} días`
+                            : "Sin ciclo de compra"}
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <div className="flex items-center text-sm text-zinc-600 dark:text-zinc-400">
                     <button
@@ -261,6 +306,39 @@ export function StockClient({
                     <button
                       type="button"
                       onClick={() => setEditingThresholdId(null)}
+                      className="min-h-9 select-none touch-manipulation rounded-full px-2 text-xs text-zinc-500"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                )}
+
+                {isEditingCycle && (
+                  <div className="flex items-center gap-2 pl-[1.375rem]">
+                    <label className="text-xs text-zinc-500">
+                      Se compra cada
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      inputMode="numeric"
+                      autoFocus
+                      value={cycleDraft}
+                      onChange={(e) => setCycleDraft(e.target.value)}
+                      placeholder="sin ciclo"
+                      className="h-9 w-20 rounded-lg border border-zinc-300 px-2 text-center text-base dark:border-zinc-700 dark:bg-zinc-900"
+                    />
+                    <span className="text-xs text-zinc-500">días</span>
+                    <button
+                      type="button"
+                      onClick={() => saveCycle(p)}
+                      className="min-h-9 select-none touch-manipulation rounded-full bg-[#16A34A] px-3 text-xs font-medium text-white active:bg-[#15803D]"
+                    >
+                      Guardar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingCycleId(null)}
                       className="min-h-9 select-none touch-manipulation rounded-full px-2 text-xs text-zinc-500"
                     >
                       Cancelar

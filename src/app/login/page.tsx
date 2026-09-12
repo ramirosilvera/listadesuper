@@ -26,8 +26,8 @@ export default function LoginPage() {
         email,
         password,
       });
-      setLoading(false);
       if (error) {
+        setLoading(false);
         setError(
           error.message === "Invalid login credentials"
             ? "Email o contraseña incorrectos."
@@ -35,14 +35,19 @@ export default function LoginPage() {
         );
         return;
       }
+      // No hacemos setLoading(false) acá a propósito: la redirección todavía
+      // tiene que resolver sesión + hogar antes de pintar algo (ver
+      // (app)/layout.tsx), así que el botón se queda en "Un momento…" hasta
+      // que la navegación reemplaza esta pantalla — evita que parpadee a su
+      // estado normal y el usuario piense que el tap no hizo nada.
       router.push("/");
       router.refresh();
       return;
     }
 
     const { data, error } = await supabase.auth.signUp({ email, password });
-    setLoading(false);
     if (error) {
+      setLoading(false);
       setError(error.message);
       return;
     }
@@ -54,6 +59,7 @@ export default function LoginPage() {
       return;
     }
 
+    setLoading(false);
     setInfo(
       "Listo. Revisá tu correo para confirmar la cuenta antes de entrar.",
     );

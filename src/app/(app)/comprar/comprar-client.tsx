@@ -3,6 +3,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { restockReasonLabel } from "@/lib/restock";
 import { Button, Input } from "@/components/ui";
 
 type Product = {
@@ -188,12 +189,15 @@ export function ComprarClient({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
 
-    setSubmitting(false);
     if (rpcError) {
+      setSubmitting(false);
       setError(rpcError.message);
       return;
     }
 
+    // Sin setSubmitting(false) acá a propósito: el botón se mantiene en
+    // "Registrando…" hasta que la navegación reemplaza esta pantalla, para
+    // no parpadear a su estado normal mientras Lista todavía está cargando.
     router.push("/lista");
     router.refresh();
   }
@@ -260,6 +264,11 @@ export function ComprarClient({
                 >
                   <span>+</span>
                   {s.name}
+                  {restockReasonLabel(s.restock_reason) && (
+                    <span className="text-xs text-amber-600 dark:text-amber-400">
+                      · {restockReasonLabel(s.restock_reason)}
+                    </span>
+                  )}
                 </button>
               ) : null,
             )}

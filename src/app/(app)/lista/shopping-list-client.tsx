@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { restockReasonLabel } from "@/lib/restock";
 import { Button, Input } from "@/components/ui";
 
 type Product = {
@@ -261,6 +262,11 @@ export function ShoppingListClient({
                 >
                   <span>+</span>
                   {s.name}
+                  {restockReasonLabel(s.restock_reason) && (
+                    <span className="text-xs text-amber-600 dark:text-amber-400">
+                      · {restockReasonLabel(s.restock_reason)}
+                    </span>
+                  )}
                 </button>
               ) : null,
             )}

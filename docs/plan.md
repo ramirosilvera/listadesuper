@@ -247,4 +247,30 @@ El usuario pidió poder sacar un producto de circulación (ejemplo real: "Pañal
 
 Aplicado y verificado en el hogar real: "Pañales Pampers talle G" archivado, confirmado en `0` en `product_replenishment`, `product_expirations_upcoming` y el catálogo activo. `tsc --noEmit`, `npm run lint` y `npm run build` limpios.
 
+---
+
+## Fase 8: reponer también por "hace cuánto no lo compramos" + revisión de UX de carga
+
+### Ciclo de compra (control adicional al stock)
+
+El usuario marcó una limitación real del diseño de Fase 4: el umbral de stock no tiene sentido para productos que se compran por hábito en un intervalo mas o menos fijo, independientemente de cuántas unidades queden — su ejemplo: aceite de oliva se compra 1 vez por mes, así que "avisar con 1 o menos" es inútil ahí. Pidió un mecanismo adicional basado en **tiempo desde la última compra**, editable por producto, que sirva además como red de seguridad si se olvidan de actualizar el stock a mano.
+
+Se agregó una tercera señal a `product_replenishment` (`restock_cycle_days` en `products`, nuevo, editable desde Stock igual que el umbral): si pasaron más días que el ciclo definido desde la última vez que el producto sumó stock (`stock_movements` con `delta > 0` — cubre tanto compras reales como la carga inicial de Fase 6), se marca `should_restock = true` con motivo `'ciclo_de_compra'`, **sin importar cuántas unidades queden**. Las tres señales (predicción automática por consumo real, umbral manual de stock, ciclo de compra) se combinan con OR: cualquiera que se cumpla dispara la sugerencia — exactamente "toma de referencia el stock y/o la fecha de compra" como lo pidió el usuario.
+
+Probado con una simulación SQL (sin persistir nada): un producto con 3 unidades en stock (muy por encima de cualquier umbral) y una compra simulada de hace 40 días con ciclo de 30 días efectivamente dispara `should_restock = true` solo por el ciclo — confirma que el control adicional funciona independientemente del stock.
+
+Se cargó `restock_cycle_days` para 39 de los 41 productos ya priorizados en la carga de umbrales (Fase 6.5), en tres niveles (15/21/30 días) según frecuencia típica de uso para esta casa — incluye el ejemplo explícito del usuario (aceite de oliva → 30 días). Quedó afuera "Pan" a propósito: con 3 días de vida útil ya lo cubre bien el mecanismo de vencimientos: un ciclo de compra aparte ahí sería redundante. Los chips de "Se están por acabar" (Lista) y "Sugeridos para reponer" (Comprar) ahora muestran también el motivo (`restockReasonLabel` en `src/lib/restock.ts`): "se está por acabar" / "queda poco stock" / "hace tiempo no lo comprás".
+
+### Revisión de UI/UX: pantalla negra durante la carga
+
+El usuario reportó que al cargar algo, la pantalla se queda negra y no se sabe si el toque se registró. Investigando (con foco en modo oscuro, donde `--background` es `#0a0a0a`, casi negro):
+
+- **Causa real encontrada**: `useLinkStatus` (Next.js) no estaba usado en ningún lado, así que tocar una pestaña del nav no daba ninguna señal instantánea de que el tap se había registrado — recién se veía algo cuando la respuesta del servidor empezaba a llegar. Se agregó un hint visual inmediato por pestaña (`TabTapHint` en `nav-bar.tsx`) que se activa apenas se registra el tap, antes de que llegue cualquier respuesta.
+- **Segunda causa real**: en Login, Onboarding y Comprar, el botón volvía a su estado normal ("Entrar", "Crear hogar", "Registrando…" → texto normal) **antes** de que la navegación terminara de resolver, porque `setLoading(false)` se llamaba apenas terminaba la llamada a Supabase, no cuando la pantalla nueva ya estaba lista. Corregido: ahora el botón se mantiene en su estado de carga hasta que la navegación reemplaza la pantalla (solo se resetea en el camino de error).
+- **Tercera causa**: el esqueleto de carga (`ListSkeleton`, agregado en la pasada de rendimiento anterior) usaba `dark:bg-zinc-900` para las barras animadas contra un fondo de fila `dark:bg-zinc-950` — casi el mismo tono, muy poco contraste en modo oscuro, se veía como "no está pasando nada". Subido a `dark:bg-zinc-800`.
+
+No se tocó el fondo oscuro en sí (`#0a0a0a`): es el modo oscuro correcto de la app, el problema era la falta de señales durante la espera, no el color de fondo.
+
+Verificado con `tsc --noEmit`, `npm run lint` y `npm run build` limpios.
+
 No se armó splash screen específico para iOS (`apple-touch-startup-image` por tamaño de dispositivo) — es papeleo de bajo impacto para un hogar de 2 personas; se puede sumar más adelante si se nota falta.

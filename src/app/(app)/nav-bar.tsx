@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 
 const TABS = [
@@ -10,6 +10,23 @@ const TABS = [
   { href: "/reportes", label: "Reportes", icon: ChartIcon },
   { href: "/ajustes", label: "Ajustes", icon: SettingsIcon },
 ];
+
+// Feedback instantáneo al tocar una pestaña: `pending` pasa a true apenas
+// se registra el tap (antes de que llegue cualquier respuesta del server),
+// así el usuario sabe que el toque se registró aunque la pantalla todavía
+// no cambió. loading.tsx de cada ruta cubre "el contenido está cargando";
+// esto cubre el instante anterior, "el tap se registró".
+function TabTapHint() {
+  const { pending } = useLinkStatus();
+  return (
+    <span
+      aria-hidden
+      className={`absolute inset-1.5 rounded-xl bg-current transition-opacity duration-150 ${
+        pending ? "opacity-10" : "opacity-0"
+      }`}
+    />
+  );
+}
 
 export function NavBar() {
   const pathname = usePathname();
@@ -36,12 +53,13 @@ export function NavBar() {
             <Link
               key={tab.href}
               href={tab.href}
-              className={`flex flex-1 flex-col items-center justify-center gap-1 text-xs font-medium ${
+              className={`relative flex flex-1 flex-col items-center justify-center gap-1 text-xs font-medium ${
                 active
                   ? "text-[#16A34A]"
                   : "text-zinc-500 dark:text-zinc-400"
               }`}
             >
+              <TabTapHint />
               <Icon className="h-6 w-6" active={!!active} />
               {tab.label}
             </Link>

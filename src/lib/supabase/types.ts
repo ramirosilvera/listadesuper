@@ -180,6 +180,7 @@ export type Database = {
           low_stock_threshold: number | null
           name: string
           notes: string | null
+          restock_cycle_days: number | null
           unit_label: string
         }
         Insert: {
@@ -193,6 +194,7 @@ export type Database = {
           low_stock_threshold?: number | null
           name: string
           notes?: string | null
+          restock_cycle_days?: number | null
           unit_label?: string
         }
         Update: {
@@ -206,6 +208,7 @@ export type Database = {
           low_stock_threshold?: number | null
           name?: string
           notes?: string | null
+          restock_cycle_days?: number | null
           unit_label?: string
         }
         Relationships: [
@@ -588,12 +591,15 @@ export type Database = {
       product_replenishment: {
         Row: {
           avg_daily_consumption: number | null
+          days_since_last_restock: number | null
           estimated_days_remaining: number | null
           household_id: string | null
+          last_restocked_at: string | null
           low_stock_threshold: number | null
           name: string | null
           product_id: string | null
           quantity_on_hand: number | null
+          restock_cycle_days: number | null
           restock_reason: string | null
           should_restock: boolean | null
           unit_label: string | null

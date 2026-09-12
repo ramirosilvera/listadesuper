@@ -23,8 +23,8 @@ export function OnboardingForm() {
       const { error } = await supabase.rpc("create_household", {
         p_name: name.trim(),
       });
-      setLoading(false);
       if (error) {
+        setLoading(false);
         setError(error.message);
         return;
       }
@@ -32,8 +32,8 @@ export function OnboardingForm() {
       const { error } = await supabase.rpc("join_household_by_code", {
         p_invite_code: code.trim(),
       });
-      setLoading(false);
       if (error) {
+        setLoading(false);
         setError(
           error.message.includes("invalido")
             ? "Ese código no corresponde a ningún hogar."
@@ -43,6 +43,10 @@ export function OnboardingForm() {
       }
     }
 
+    // Sin setLoading(false) acá a propósito: el botón se mantiene en
+    // "Un momento…" hasta que la navegación reemplaza esta pantalla,
+    // en vez de volver a su estado normal mientras todavía se está
+    // resolviendo el layout de destino.
     router.push("/lista");
     router.refresh();
   }
