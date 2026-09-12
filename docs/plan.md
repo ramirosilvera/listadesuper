@@ -791,6 +791,18 @@ Pedido del usuario, retomado tras una interrupción de contexto en la sesión (c
 
 ---
 
+## Fase 26: en Comprar, elegir si la compra suma o reemplaza el stock
+
+Seguimiento directo de la fase anterior: ahí se descartó resetear `quantity_on_hand` a 0 automáticamente al vencer un ciclo de compra, porque fabricaba una cantidad falsa sin que nadie la confirmara. La alternativa propuesta en esa misma respuesta fue: dejar que la persona confirme, en el momento exacto de una compra real (cuando tiene la información real a mano), si el número de Stock necesitaba corregirse. El usuario pidió avanzar con eso.
+
+**Diseño**: en cada ítem de Comprar se agregó un toggle chico, apagado por defecto ("Se suma al stock que había" — el comportamiento de siempre, cero fricción para el caso común). Al activarlo ("Reemplaza el stock — queda en N unidad"), esa compra puntual no se suma a lo que había: fija el stock exactamente en la cantidad comprada. Deliberadamente por-ítem y no un ajuste global de la compra: una misma compra puede tener productos con conteo confiable (se suma bien) y productos con conteo dudoso (conviene corregir), no tiene sentido forzar la misma decisión a todos.
+
+**Implementación en `record_purchase`** (RPC ya existente, Fase 18): cada ítem de `p_items` ahora acepta un campo opcional `replace_stock` (default `false`, así que llamadas antiguas sin este campo siguen funcionando exactamente igual). Con `replace_stock=true`, en vez de insertar `stock_movements.delta = cantidad_comprada` (que siempre suma), se calcula primero la suma actual de movimientos de ese producto y se inserta el delta que hace falta para que el total dé exactamente la cantidad comprada — sigue siendo un movimiento más en el historial real (no se sobreescribe ni se borra nada), solo que con la magnitud necesaria para llegar al número correcto. El resto de la función (validación cross-tenant, lock de duplicados, `needs_restock`, vencimientos, limpieza de la lista activa) es idéntico a la versión vigente desde la Fase 25; se verificó carácter por carácter contra `pg_get_functiondef` antes y después de aplicar el cambio.
+
+**Verificado con dos casos reales encadenados en la misma transacción con `rollback`** (RLS real, `set local role authenticated` + JWT del usuario real): (1) "Piedras sanitarias para gato" tenía `quantity_on_hand=3` real; comprar 1 con `replace_stock=true` lo dejó en exactamente 1, no en 4. (2) Sobre ese mismo estado (ya en 1), comprar 1 más con `replace_stock=false` (el comportamiento de siempre) lo llevó a 2 — confirma que "sumar" sigue funcionando sin cambios para el caso común. `mcp__Supabase__get_advisors` sin hallazgos de seguridad nuevos. `npm run build`/`npm run lint` limpios.
+
+---
+
 ## Fase 24: eliminar definitivamente productos archivados
 
 Pedido del usuario, con motivo concreto: hay productos del import inicial (Fase 1) archivados por ser duplicados, ambiguos o incompletos, y "no tiene sentido archivarlos para siempre". Roles: integridad de datos (qué se pierde realmente al borrar) y seguridad/RLS (dónde debe vivir la restricción).

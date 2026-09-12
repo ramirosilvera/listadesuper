@@ -37,6 +37,14 @@ type Row = {
   quantity: number;
   unit_price: string;
   expiration_date: string;
+  // Por defecto la compra SUMA a lo que ya había en Stock (mismo
+  // comportamiento de siempre). "Reemplaza" es para el caso en que el
+  // número de Stock quedó desactualizado (nadie lo tocó en un tiempo,
+  // ciclo largo, etc.) y esta compra real es la oportunidad exacta -- la
+  // única persona que sabe con certeza cuánto queda en este momento -- de
+  // corregirlo, en vez de dejar que la app siga sumando sobre una base
+  // que ya no es real.
+  replaceStock: boolean;
 };
 
 // Fecha de vencimiento sugerida a partir de la vida util estimada del
@@ -79,6 +87,7 @@ export function ComprarClient({
         quantity: it.quantity,
         unit_price: "",
         expiration_date: suggestExpiration(it.products!.default_shelf_life_days),
+        replaceStock: false,
       })),
   );
   const [suggestions, setSuggestions] = useState(initialSuggestions);
@@ -137,6 +146,7 @@ export function ComprarClient({
           quantity: 1,
           unit_price: "",
           expiration_date: suggestExpiration(product.default_shelf_life_days),
+          replaceStock: false,
         },
       ];
     });
@@ -220,6 +230,7 @@ export function ComprarClient({
         quantity: r.quantity,
         unit_price: isNaN(price) ? null : price,
         expiration_date: r.expiration_date || null,
+        replace_stock: r.replaceStock,
       };
     });
 
@@ -436,6 +447,34 @@ export function ComprarClient({
                   aria-label={`Fecha de vencimiento de ${row.name}`}
                 />
               </label>
+
+              {/* Apagado por defecto: la mayoría de las compras suman
+                  bien al stock que ya había, y preguntar esto siempre
+                  sería la fricción que el pedido original quería evitar.
+                  Existe para el caso en que el número de Stock quedó
+                  desactualizado (nadie lo tocó en un tiempo) y esta
+                  compra real es la oportunidad exacta de corregirlo --
+                  lo confirma la persona en el momento que tiene la info,
+                  no una suposición automática semanas después. */}
+              <button
+                type="button"
+                onClick={() => updateRow(row.key, { replaceStock: !row.replaceStock })}
+                aria-pressed={row.replaceStock}
+                className="flex items-center gap-1.5 self-start text-xs text-zinc-500"
+              >
+                {row.replaceStock ? (
+                  <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded bg-amber-500 text-white">
+                    <svg viewBox="0 0 24 24" className="h-2.5 w-2.5" fill="none" stroke="currentColor" strokeWidth={3.5} strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 6 9 17l-5-5" />
+                    </svg>
+                  </span>
+                ) : (
+                  <span className="h-4 w-4 shrink-0 rounded border-2 border-zinc-300 dark:border-zinc-700" />
+                )}
+                {row.replaceStock
+                  ? `Reemplaza el stock — queda en ${row.quantity} ${row.unit_label}`
+                  : "Se suma al stock que había"}
+              </button>
             </li>
           ))}
         </ul>
