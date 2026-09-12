@@ -33,6 +33,8 @@ export function StockClient({
   const supabase = useMemo(() => createClient(), []);
   const [products, setProducts] = useState(initialProducts);
   const [query, setQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("");
+  const [lowStockOnly, setLowStockOnly] = useState(false);
   const [editingSettingsId, setEditingSettingsId] = useState<string | null>(null);
   const [nameDraft, setNameDraft] = useState("");
   const [thresholdDraft, setThresholdDraft] = useState("");
@@ -79,11 +81,43 @@ export function StockClient({
     return map;
   }, [categories]);
 
-  const filtered = useMemo(() => {
+  const searched = useMemo(() => {
     if (!query.trim()) return products;
     const q = query.trim().toLowerCase();
     return products.filter((p) => p.name.toLowerCase().includes(q));
   }, [products, query]);
+
+  // Chips de categoría: con 110+ productos en 12 categorías (verificado
+  // sobre el hogar real), scrollear buscando una categoría a ojo es
+  // lento -- el conteo por chip se calcula sobre `searched` (después del
+  // texto de búsqueda, antes de categoría/bajo stock) para que refleje
+  // "cuántos hay en esta categoría dado lo que ya tipeaste", no un
+  // número fijo que no cambia mientras buscás.
+  const categoryChips = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const p of searched) {
+      const key = p.category_id ?? "_sin_categoria";
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    const chips = categories
+      .filter((c) => counts.has(c.id))
+      .map((c) => ({ key: c.id, label: c.name, count: counts.get(c.id)! }));
+    if (counts.has("_sin_categoria")) {
+      chips.push({ key: "_sin_categoria", label: "Otros", count: counts.get("_sin_categoria")! });
+    }
+    return chips;
+  }, [searched, categories]);
+
+  const filtered = useMemo(() => {
+    return searched.filter((p) => {
+      if (categoryFilter) {
+        const key = p.category_id ?? "_sin_categoria";
+        if (key !== categoryFilter) return false;
+      }
+      if (lowStockOnly && p.quantity_on_hand > 1) return false;
+      return true;
+    });
+  }, [searched, categoryFilter, lowStockOnly]);
 
   const grouped = useMemo(() => {
     const groups = new Map<string, { label: string; order: number; items: Product[] }>();
@@ -242,6 +276,52 @@ export function StockClient({
         onChange={(e) => setQuery(e.target.value)}
       />
 
+      {(categoryChips.length > 0 || lowStockOnly) && (
+        // Sin bleed a los bordes (-mx/px fijo): el padding real de <main>
+        // en el layout usa env(safe-area-inset-*), que en dispositivos con
+        // notch supera 1rem -- un margen negativo fijo hubiera dejado un
+        // hueco o un corte según el dispositivo. Se scrollea dentro del
+        // ancho normal del contenido, no borde a borde.
+        <div className="flex gap-1.5 overflow-x-auto pb-0.5">
+          <button
+            type="button"
+            onClick={() => setCategoryFilter("")}
+            className={`min-h-8 shrink-0 select-none touch-manipulation rounded-full px-3 text-xs font-medium ${
+              categoryFilter === ""
+                ? "bg-[#16A34A] text-white"
+                : "bg-zinc-100 text-zinc-600 active:bg-zinc-200 dark:bg-zinc-900 dark:text-zinc-400 dark:active:bg-zinc-800"
+            }`}
+          >
+            Todas
+          </button>
+          {categoryChips.map((c) => (
+            <button
+              key={c.key}
+              type="button"
+              onClick={() => setCategoryFilter((prev) => (prev === c.key ? "" : c.key))}
+              className={`min-h-8 shrink-0 select-none touch-manipulation rounded-full px-3 text-xs font-medium ${
+                categoryFilter === c.key
+                  ? "bg-[#16A34A] text-white"
+                  : "bg-zinc-100 text-zinc-600 active:bg-zinc-200 dark:bg-zinc-900 dark:text-zinc-400 dark:active:bg-zinc-800"
+              }`}
+            >
+              {c.label} <span className="opacity-70">{c.count}</span>
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => setLowStockOnly((v) => !v)}
+            className={`min-h-8 shrink-0 select-none touch-manipulation rounded-full border px-3 text-xs font-medium ${
+              lowStockOnly
+                ? "border-amber-600 bg-amber-500 text-white"
+                : "border-amber-200 bg-amber-50 text-amber-700 active:bg-amber-100 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300 dark:active:bg-amber-900"
+            }`}
+          >
+            Bajo stock
+          </button>
+        </div>
+      )}
+
       {hasEstimatedStock && !bannerDismissed && (
         <div className="flex items-start gap-2 rounded-xl bg-zinc-100 px-3 py-2.5 text-xs text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400">
           <span className="flex-1">
@@ -261,10 +341,16 @@ export function StockClient({
         </div>
       )}
 
-      {grouped.length === 0 && (
+      {grouped.length === 0 && products.length === 0 && (
         <p className="py-12 text-center text-sm text-zinc-500">
           Todavía no hay productos. Se van a ir sumando solos a medida que
           registrés compras.
+        </p>
+      )}
+
+      {grouped.length === 0 && products.length > 0 && (
+        <p className="py-12 text-center text-sm text-zinc-500">
+          Ningún producto coincide con el filtro.
         </p>
       )}
 
