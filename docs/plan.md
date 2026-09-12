@@ -296,4 +296,20 @@ El usuario pidió sacar de Ajustes las tarjetas "Catálogo inicial" y "Stock ini
 
 Verificado con `tsc --noEmit`, `npm run lint` y `npm run build` limpios (sin imports ni variables sin usar tras sacar el código muerto en el cliente).
 
+---
+
+## Fase 10: auditoría de UX en el rol de "primera usuaria" (a pedido del usuario)
+
+El usuario pidió que actuara como su esposa recibiendo la app por primera vez por WhatsApp, revisara su experiencia real y corrigiera lo que hiciera falta. Sin poder abrir un browser real contra Supabase desde este entorno (bloqueo de red ya documentado), se hizo con dos fuentes reales en vez de suposiciones: los datos reales del hogar "Casa" en Supabase, y una lectura línea por línea de cada pantalla que ella recorrería en su primera sesión (login vía `/join/[codigo]` → Lista → Stock → Comprar → Reportes → Ajustes).
+
+**Hallazgo real, verificado con datos (no hipótesis)**: la carga inicial de Fase 6 simuló "como si se hubiera comprado todo hoy" incluyendo productos de vida útil muy corta (Pan y Tarta, 3 días). Un día después, `product_expirations_upcoming` ya los mostraba en rojo ("vence en 2 días") — una alarma falsa para algo que en realidad nadie compró "hoy", justo el tipo de primera impresión que rompe la confianza en la app. Se resolvieron (mismo mecanismo que "Ya lo usé", `status='consumed'`, no destructivo) los 5 vencimientos sembrados sin compra real (`purchase_item_id is null`) con vida útil ≤15 días (Pan, Tarta, Morrón, Crema, Yogur) — los de vida útil larga no generan el mismo problema visible a corto plazo, así que se dejaron.
+
+**Hallazgo real de volumen**: con los umbrales y ciclos de compra ya cargados (Fases 6.5 y 8), la primera vez que ella abra Lista o Comprar va a ver **40 sugerencias** de una — separado de si eso es útil, es demasiado para procesar de un vistazo antes de haber usado la app ni una vez. Se extrajo un componente compartido `RestockChips` (`src/components/restock-chips.tsx`, usado por Lista y Comprar, reemplaza el bloque que estaba duplicado en los dos archivos) que muestra las primeras 8 sugerencias con un "+N más" para expandir el resto — mismo dato, menos abrumador de entrada.
+
+**Hallazgo real de ruido visual en Stock**: cada uno de los 140+ productos mostraba dos textos siempre visibles ("Avisar con poco stock" / "Sin ciclo de compra") aunque no estuvieran configurados — para alguien nueva, sin contexto de qué son esos dos conceptos, es ruido en cada una de más de cien filas. Se consolidó en un solo ícono de ajustes (⚙) por producto que abre un panel combinado con ambos campos; el texto bajo el nombre del producto ahora solo aparece cuando algo está configurado ("Avisar con 1 · cada 30 días"), no como placeholder permanente.
+
+**Nota real encontrada de paso**: al revisar los datos vivos aparecieron 2 productos nuevos ("Pizza Sibarita", "Enjuague bucal") creados el 12/09 por uso real de la app — no es un bug, es la evidencia de que ya la están usando de verdad; sirvió además para confirmar que el flujo de "agregar producto nuevo" y de configurar umbral/ciclo ya funcionaban en producción antes de este cambio.
+
+Verificado con `tsc --noEmit`, `npm run lint` y `npm run build` limpios.
+
 No se armó splash screen específico para iOS (`apple-touch-startup-image` por tamaño de dispositivo) — es papeleo de bajo impacto para un hogar de 2 personas; se puede sumar más adelante si se nota falta.

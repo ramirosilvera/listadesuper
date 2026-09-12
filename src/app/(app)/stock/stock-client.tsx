@@ -28,9 +28,8 @@ export function StockClient({
   const supabase = useMemo(() => createClient(), []);
   const [products, setProducts] = useState(initialProducts);
   const [query, setQuery] = useState("");
-  const [editingThresholdId, setEditingThresholdId] = useState<string | null>(null);
+  const [editingSettingsId, setEditingSettingsId] = useState<string | null>(null);
   const [thresholdDraft, setThresholdDraft] = useState("");
-  const [editingCycleId, setEditingCycleId] = useState<string | null>(null);
   const [cycleDraft, setCycleDraft] = useState("");
   const [confirmArchiveId, setConfirmArchiveId] = useState<string | null>(null);
   const [archiving, setArchiving] = useState<string | null>(null);
@@ -77,53 +76,45 @@ export function StockClient({
     });
   }
 
-  function startEditingThreshold(product: Product) {
-    setEditingThresholdId(product.id);
+  // Umbral de stock y ciclo de compra se editan juntos en un solo panel
+  // (antes eran dos disparadores separados siempre visibles por
+  // producto — con 140 productos era mucho texto de "sin configurar"
+  // para alguien que recién entra a la app). Ver vista
+  // product_replenishment (columna restock_reason: 'umbral_manual' o
+  // 'ciclo_de_compra' — este último sirve para productos que se compran
+  // por hábito en un intervalo mas o menos fijo, ej. aceite de oliva 1
+  // vez por mes, independientemente de cuantas unidades queden).
+  function startEditingSettings(product: Product) {
+    setEditingSettingsId(product.id);
     setThresholdDraft(
       product.low_stock_threshold !== null ? String(product.low_stock_threshold) : "",
     );
-  }
-
-  async function saveThreshold(product: Product) {
-    const parsed = thresholdDraft.trim() === "" ? null : Number(thresholdDraft);
-    const value = parsed !== null && !isNaN(parsed) && parsed >= 0 ? parsed : null;
-
-    setProducts((prev) =>
-      prev.map((p) => (p.id === product.id ? { ...p, low_stock_threshold: value } : p)),
-    );
-    setEditingThresholdId(null);
-
-    await supabase
-      .from("products")
-      .update({ low_stock_threshold: value })
-      .eq("id", product.id);
-  }
-
-  function startEditingCycle(product: Product) {
-    setEditingCycleId(product.id);
     setCycleDraft(
       product.restock_cycle_days !== null ? String(product.restock_cycle_days) : "",
     );
   }
 
-  // Ciclo de compra: control adicional a la cantidad en stock. Sirve para
-  // productos que se compran por hábito en un intervalo mas o menos fijo
-  // (ej. aceite de oliva 1 vez por mes) independientemente de cuantas
-  // unidades queden — y como red por si se olvidan de actualizar el stock
-  // a mano. Ver vista product_replenishment (columna restock_reason
-  // 'ciclo_de_compra').
-  async function saveCycle(product: Product) {
-    const parsed = cycleDraft.trim() === "" ? null : Number(cycleDraft);
-    const value = parsed !== null && !isNaN(parsed) && parsed > 0 ? parsed : null;
+  async function saveSettings(product: Product) {
+    const parsedThreshold = thresholdDraft.trim() === "" ? null : Number(thresholdDraft);
+    const threshold =
+      parsedThreshold !== null && !isNaN(parsedThreshold) && parsedThreshold >= 0
+        ? parsedThreshold
+        : null;
+    const parsedCycle = cycleDraft.trim() === "" ? null : Number(cycleDraft);
+    const cycle = parsedCycle !== null && !isNaN(parsedCycle) && parsedCycle > 0 ? parsedCycle : null;
 
     setProducts((prev) =>
-      prev.map((p) => (p.id === product.id ? { ...p, restock_cycle_days: value } : p)),
+      prev.map((p) =>
+        p.id === product.id
+          ? { ...p, low_stock_threshold: threshold, restock_cycle_days: cycle }
+          : p,
+      ),
     );
-    setEditingCycleId(null);
+    setEditingSettingsId(null);
 
     await supabase
       .from("products")
-      .update({ restock_cycle_days: value })
+      .update({ low_stock_threshold: threshold, restock_cycle_days: cycle })
       .eq("id", product.id);
   }
 
@@ -171,8 +162,13 @@ export function StockClient({
                   : p.quantity_on_hand <= 1
                     ? "low"
                     : "ok";
-              const isEditingThreshold = editingThresholdId === p.id;
-              const isEditingCycle = editingCycleId === p.id;
+              const isEditingSettings = editingSettingsId === p.id;
+              const settingsSummary = [
+                p.low_stock_threshold !== null ? `Avisar con ${p.low_stock_threshold}` : null,
+                p.restock_cycle_days !== null ? `cada ${p.restock_cycle_days} días` : null,
+              ]
+                .filter(Boolean)
+                .join(" · ");
               return (
                 <li
                   key={p.id}
@@ -191,30 +187,15 @@ export function StockClient({
                   />
                   <div className="min-w-0 flex-1">
                     <p className="text-sm text-zinc-900 dark:text-zinc-50">{p.name}</p>
-                    <div className="flex flex-wrap gap-x-2">
-                      {!isEditingThreshold && (
-                        <button
-                          type="button"
-                          onClick={() => startEditingThreshold(p)}
-                          className="text-xs text-zinc-400 underline decoration-dotted active:text-zinc-600 dark:active:text-zinc-300"
-                        >
-                          {p.low_stock_threshold !== null
-                            ? `Avisar con ${p.low_stock_threshold} o menos`
-                            : "Avisar con poco stock"}
-                        </button>
-                      )}
-                      {!isEditingCycle && (
-                        <button
-                          type="button"
-                          onClick={() => startEditingCycle(p)}
-                          className="text-xs text-zinc-400 underline decoration-dotted active:text-zinc-600 dark:active:text-zinc-300"
-                        >
-                          {p.restock_cycle_days !== null
-                            ? `Se compra cada ${p.restock_cycle_days} días`
-                            : "Sin ciclo de compra"}
-                        </button>
-                      )}
-                    </div>
+                    {!isEditingSettings && settingsSummary && (
+                      <button
+                        type="button"
+                        onClick={() => startEditingSettings(p)}
+                        className="text-xs text-zinc-400 underline decoration-dotted active:text-zinc-600 dark:active:text-zinc-300"
+                      >
+                        {settingsSummary}
+                      </button>
+                    )}
                   </div>
                   <div className="flex items-center text-sm text-zinc-600 dark:text-zinc-400">
                     <button
@@ -244,6 +225,21 @@ export function StockClient({
                       </span>
                     </button>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      isEditingSettings ? setEditingSettingsId(null) : startEditingSettings(p)
+                    }
+                    aria-label={`Configurar avisos de ${p.name}`}
+                    className={`flex h-9 w-9 shrink-0 select-none items-center justify-center ${
+                      isEditingSettings ? "text-[#16A34A]" : "text-zinc-400 active:text-zinc-600 dark:active:text-zinc-300"
+                    }`}
+                  >
+                    <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="3" />
+                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" />
+                    </svg>
+                  </button>
                   <button
                     type="button"
                     onClick={() => setConfirmArchiveId(p.id)}
@@ -281,68 +277,50 @@ export function StockClient({
                   </div>
                 )}
 
-                {isEditingThreshold && (
-                  <div className="flex items-center gap-2 pl-[1.375rem]">
-                    <label className="text-xs text-zinc-500">
+                {isEditingSettings && (
+                  <div className="flex flex-col gap-2 rounded-lg bg-zinc-50 p-2.5 pl-[1.375rem] dark:bg-zinc-900/60">
+                    <label className="flex items-center gap-2 text-xs text-zinc-500">
                       Avisar cuando queden
+                      <input
+                        type="number"
+                        min={0}
+                        inputMode="numeric"
+                        autoFocus
+                        value={thresholdDraft}
+                        onChange={(e) => setThresholdDraft(e.target.value)}
+                        placeholder="sin aviso"
+                        className="h-9 w-20 rounded-lg border border-zinc-300 px-2 text-center text-base dark:border-zinc-700 dark:bg-zinc-900"
+                      />
                     </label>
-                    <input
-                      type="number"
-                      min={0}
-                      inputMode="numeric"
-                      autoFocus
-                      value={thresholdDraft}
-                      onChange={(e) => setThresholdDraft(e.target.value)}
-                      placeholder="sin aviso"
-                      className="h-9 w-20 rounded-lg border border-zinc-300 px-2 text-center text-base dark:border-zinc-700 dark:bg-zinc-900"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => saveThreshold(p)}
-                      className="min-h-9 select-none touch-manipulation rounded-full bg-[#16A34A] px-3 text-xs font-medium text-white active:bg-[#15803D]"
-                    >
-                      Guardar
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setEditingThresholdId(null)}
-                      className="min-h-9 select-none touch-manipulation rounded-full px-2 text-xs text-zinc-500"
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-                )}
-
-                {isEditingCycle && (
-                  <div className="flex items-center gap-2 pl-[1.375rem]">
-                    <label className="text-xs text-zinc-500">
+                    <label className="flex items-center gap-2 text-xs text-zinc-500">
                       Se compra cada
+                      <input
+                        type="number"
+                        min={1}
+                        inputMode="numeric"
+                        value={cycleDraft}
+                        onChange={(e) => setCycleDraft(e.target.value)}
+                        placeholder="sin ciclo"
+                        className="h-9 w-20 rounded-lg border border-zinc-300 px-2 text-center text-base dark:border-zinc-700 dark:bg-zinc-900"
+                      />
+                      días
                     </label>
-                    <input
-                      type="number"
-                      min={1}
-                      inputMode="numeric"
-                      autoFocus
-                      value={cycleDraft}
-                      onChange={(e) => setCycleDraft(e.target.value)}
-                      placeholder="sin ciclo"
-                      className="h-9 w-20 rounded-lg border border-zinc-300 px-2 text-center text-base dark:border-zinc-700 dark:bg-zinc-900"
-                    />
-                    <span className="text-xs text-zinc-500">días</span>
-                    <button
-                      type="button"
-                      onClick={() => saveCycle(p)}
-                      className="min-h-9 select-none touch-manipulation rounded-full bg-[#16A34A] px-3 text-xs font-medium text-white active:bg-[#15803D]"
-                    >
-                      Guardar
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setEditingCycleId(null)}
-                      className="min-h-9 select-none touch-manipulation rounded-full px-2 text-xs text-zinc-500"
-                    >
-                      Cancelar
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => saveSettings(p)}
+                        className="min-h-9 select-none touch-manipulation rounded-full bg-[#16A34A] px-3 text-xs font-medium text-white active:bg-[#15803D]"
+                      >
+                        Guardar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingSettingsId(null)}
+                        className="min-h-9 select-none touch-manipulation rounded-full px-2 text-xs text-zinc-500"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
                   </div>
                 )}
                 </li>

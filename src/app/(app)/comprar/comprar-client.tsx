@@ -3,7 +3,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { restockReasonLabel } from "@/lib/restock";
+import { RestockChips } from "@/components/restock-chips";
 import { Button, Input } from "@/components/ui";
 
 type Product = {
@@ -232,43 +232,21 @@ export function ComprarClient({
         )}
       </form>
 
-      {restockChips.length > 0 && (
-        <div>
-          <h2 className="mb-1.5 px-1 text-xs font-semibold tracking-wide text-zinc-400 uppercase">
-            Sugeridos para reponer
-          </h2>
-          <div className="flex flex-wrap gap-2">
-            {restockChips.map((s) =>
-              s.product_id ? (
-                <button
-                  key={s.product_id}
-                  type="button"
-                  onClick={() => {
-                    const product = allProducts.find((p) => p.id === s.product_id);
-                    addRow(
-                      product ?? {
-                        id: s.product_id!,
-                        name: s.name ?? "Producto",
-                        unit_label: s.unit_label ?? "unidad",
-                        default_shelf_life_days: null,
-                      },
-                    );
-                  }}
-                  className="flex min-h-9 select-none touch-manipulation items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 text-sm text-amber-800 active:bg-amber-100 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300 dark:active:bg-amber-900"
-                >
-                  <span>+</span>
-                  {s.name}
-                  {restockReasonLabel(s.restock_reason) && (
-                    <span className="text-xs text-amber-600 dark:text-amber-400">
-                      · {restockReasonLabel(s.restock_reason)}
-                    </span>
-                  )}
-                </button>
-              ) : null,
-            )}
-          </div>
-        </div>
-      )}
+      <RestockChips
+        title="Sugeridos para reponer"
+        suggestions={restockChips}
+        onAdd={(s) => {
+          const product = allProducts.find((p) => p.id === s.product_id);
+          addRow(
+            product ?? {
+              id: s.product_id!,
+              name: s.name ?? "Producto",
+              unit_label: s.unit_label ?? "unidad",
+              default_shelf_life_days: null,
+            },
+          );
+        }}
+      />
 
       <div>
         <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
