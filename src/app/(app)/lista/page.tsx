@@ -61,7 +61,7 @@ export default async function ListaPage() {
         .order("sort_order", { ascending: true }),
       supabase
         .from("product_replenishment")
-        .select("product_id, name, unit_label, restock_reason")
+        .select("product_id, name, unit_label, restock_reason, days_since_last_restock")
         .eq("household_id", household.id)
         .eq("should_restock", true),
     ]);

@@ -8,6 +8,7 @@ export type RestockSuggestion = {
   name: string | null;
   unit_label: string | null;
   restock_reason: string | null;
+  days_since_last_restock: number | null;
 };
 
 const VISIBLE_LIMIT = 8;
@@ -40,8 +41,10 @@ export function RestockChips({
         {title}
       </h2>
       <div className="flex flex-wrap gap-2">
-        {visible.map((s) =>
-          s.product_id ? (
+        {visible.map((s) => {
+          if (!s.product_id) return null;
+          const label = restockReasonLabel(s.restock_reason, s.days_since_last_restock);
+          return (
             <button
               key={s.product_id}
               type="button"
@@ -50,14 +53,12 @@ export function RestockChips({
             >
               <span>+</span>
               {s.name}
-              {restockReasonLabel(s.restock_reason) && (
-                <span className="text-xs text-amber-600 dark:text-amber-400">
-                  · {restockReasonLabel(s.restock_reason)}
-                </span>
+              {label && (
+                <span className="text-xs text-amber-600 dark:text-amber-400">· {label}</span>
               )}
             </button>
-          ) : null,
-        )}
+          );
+        })}
         {hiddenCount > 0 && (
           <button
             type="button"

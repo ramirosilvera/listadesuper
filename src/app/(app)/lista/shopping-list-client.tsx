@@ -28,6 +28,7 @@ type Suggestion = {
   name: string | null;
   unit_label: string | null;
   restock_reason: string | null;
+  days_since_last_restock: number | null;
 };
 
 export function ShoppingListClient({
