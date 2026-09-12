@@ -73,6 +73,8 @@ export default async function ReportesPage() {
 
   return (
     <ReportesTabs
+      householdId={household.id}
+      householdName={household.name}
       totalSpend30d={totalSpend30d}
       byCategory={byCategory ?? []}
       byWeek={byWeek ?? []}

@@ -38,6 +38,8 @@ type Purchase = {
 };
 
 export function ReportesTabs({
+  householdId,
+  householdName,
   totalSpend30d,
   byCategory,
   byWeek,
@@ -47,6 +49,8 @@ export function ReportesTabs({
   purchases,
   suggestions,
 }: {
+  householdId: string;
+  householdName: string;
   totalSpend30d: number;
   byCategory: CategorySpend[];
   byWeek: WeekSpend[];
@@ -87,7 +91,13 @@ export function ReportesTabs({
           restockCount={restockCount}
         />
       )}
-      {tab === "historial" && <PurchaseHistory purchases={purchases} />}
+      {tab === "historial" && (
+        <PurchaseHistory
+          purchases={purchases}
+          householdId={householdId}
+          householdName={householdName}
+        />
+      )}
       {tab === "sugerencias" && <SuggestionsPanel suggestions={suggestions} />}
     </div>
   );

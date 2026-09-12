@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Card } from "@/components/ui";
+import { createClient } from "@/lib/supabase/client";
+import { Button, Card } from "@/components/ui";
 
 type PurchaseItem = {
   id: string;
@@ -119,12 +120,168 @@ function ItemRow({ item }: { item: PurchaseItem }) {
   );
 }
 
+// El array de arriba (`purchases`) viene del server acotado a las últimas
+// 30 compras (ver reportes/page.tsx) -- suficiente para mostrar el
+// historial reciente, pero exportar tiene que traer todo lo que haya (o el
+// rango que se pida), así que la exportación hace su propia consulta desde
+// el cliente en vez de reusar ese array.
+const RANGE_TZ_OFFSET = "-03:00"; // Argentina: UTC-3 fijo, sin horario de verano desde 2009.
+
+function downloadJson(filename: string, data: unknown) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function ExportPanel({
+  householdId,
+  householdName,
+}: {
+  householdId: string;
+  householdName: string;
+}) {
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+
+  async function handleExport() {
+    setExportError(null);
+    setExporting(true);
+    const supabase = createClient();
+    let query = supabase
+      .from("purchases")
+      .select(
+        "id, purchased_at, total_amount, stores(name), purchase_items(id, quantity, unit_price, subtotal, products(name, unit_label))",
+      )
+      .eq("household_id", householdId)
+      .order("purchased_at", { ascending: true });
+
+    // Los <input type="date"> dan "AAAA-MM-DD" sin zona horaria -- armar acá
+    // el límite completo del día en la zona del hogar evita el desfasaje
+    // de un día que daría comparar eso contra purchased_at (timestamptz) sin
+    // conversión.
+    if (fromDate) query = query.gte("purchased_at", `${fromDate}T00:00:00${RANGE_TZ_OFFSET}`);
+    if (toDate) query = query.lte("purchased_at", `${toDate}T23:59:59.999${RANGE_TZ_OFFSET}`);
+
+    const { data, error } = await query.returns<Purchase[]>();
+    setExporting(false);
+    if (error || !data) {
+      setExportError("No se pudo exportar. Probá de nuevo.");
+      return;
+    }
+
+    const hasRange = !!(fromDate || toDate);
+    downloadJson(
+      `listasuper-historial${hasRange ? `_${fromDate || "inicio"}_a_${toDate || "hoy"}` : "_completo"}.json`,
+      {
+        hogar: householdName,
+        exportado_el: new Date().toISOString(),
+        rango: hasRange ? { desde: fromDate || null, hasta: toDate || null } : "todo",
+        cantidad_compras: data.length,
+        compras: data.map((p) => ({
+          id: p.id,
+          fecha: p.purchased_at,
+          supermercado: p.stores?.name ?? null,
+          total: p.total_amount,
+          items: p.purchase_items.map((it) => ({
+            producto: it.products?.name ?? null,
+            unidad: it.products?.unit_label ?? null,
+            cantidad: it.quantity,
+            precio_unitario: it.unit_price,
+            subtotal: it.subtotal,
+          })),
+        })),
+      },
+    );
+  }
+
+  return (
+    <Card className="flex flex-col gap-3 p-4">
+      <div>
+        <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50">
+          Exportar historial (JSON)
+        </p>
+        <p className="mt-0.5 text-xs text-zinc-500">
+          Dejá las fechas vacías para exportar todo, o elegí un rango.
+        </p>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <label className="flex items-center gap-1.5 text-xs text-zinc-500">
+          Desde
+          <input
+            type="date"
+            value={fromDate}
+            max={toDate || undefined}
+            onChange={(e) => setFromDate(e.target.value)}
+            // text-base (16px), no text-xs: en iOS Safari un input mas
+            // chico hace auto-zoom al tocarlo.
+            className="h-9 rounded-lg border border-zinc-300 px-2 text-base text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+          />
+        </label>
+        <label className="flex items-center gap-1.5 text-xs text-zinc-500">
+          Hasta
+          <input
+            type="date"
+            value={toDate}
+            min={fromDate || undefined}
+            onChange={(e) => setToDate(e.target.value)}
+            className="h-9 rounded-lg border border-zinc-300 px-2 text-base text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+          />
+        </label>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <Button size="sm" disabled={exporting} onClick={handleExport}>
+          {exporting ? "Exportando…" : fromDate || toDate ? "Exportar rango" : "Exportar todo"}
+        </Button>
+        {(fromDate || toDate) && (
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={exporting}
+            onClick={() => {
+              setFromDate("");
+              setToDate("");
+            }}
+          >
+            Limpiar
+          </Button>
+        )}
+      </div>
+
+      {exportError && <p className="text-xs text-red-600 dark:text-red-400">{exportError}</p>}
+
+      <p className="text-xs text-zinc-400">
+        En iPhone puede abrirse en una pestaña nueva en vez de descargarse
+        directo — desde ahí, compartir y elegir &quot;Guardar en
+        Archivos&quot;.
+      </p>
+    </Card>
+  );
+}
+
 // No existe un objeto "lista semanal" propio en el modelo de datos (la
 // lista compartida es una sola, continua) — cada fila de `purchases` es
 // lo más parecido a "una compra puntual"; este historial las agrupa por
 // día para mostrar "la compra del día" completa, con el detalle de cada
 // tanda original disponible al expandir cuando hubo más de una.
-export function PurchaseHistory({ purchases }: { purchases: Purchase[] }) {
+export function PurchaseHistory({
+  purchases,
+  householdId,
+  householdName,
+}: {
+  purchases: Purchase[];
+  householdId: string;
+  householdName: string;
+}) {
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
   const days = useMemo(() => groupByDay(purchases), [purchases]);
 
@@ -138,7 +295,9 @@ export function PurchaseHistory({ purchases }: { purchases: Purchase[] }) {
   }
 
   return (
-    <ul className="flex flex-col gap-2">
+    <div className="flex flex-col gap-3">
+      <ExportPanel householdId={householdId} householdName={householdName} />
+      <ul className="flex flex-col gap-2">
       {days.map((group) => {
         const expanded = expandedDay === group.dayKey;
         const multi = group.purchases.length > 1;
@@ -216,6 +375,7 @@ export function PurchaseHistory({ purchases }: { purchases: Purchase[] }) {
           </li>
         );
       })}
-    </ul>
+      </ul>
+    </div>
   );
 }
