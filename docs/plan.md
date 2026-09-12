@@ -803,6 +803,20 @@ Seguimiento directo de la fase anterior: ahí se descartó resetear `quantity_on
 
 ---
 
+## Fase 27: bug real — "Aceite de oliva genérico" se marcaba "por acabar" con threshold en 0
+
+El usuario reportó algo puntual y verificable: con la alerta configurada en "avisame con 0" y Stock mostrando 1 unidad, la app igual marcaba el producto como "se está por acabar". Su hipótesis fue que tenía que ver con un cambio propio reciente (renombrar unidades de varios productos: aceite de oliva a "500 cc", quesos a "500 g", etc., usando el editor de unidad de la Fase de hace dos rondas). Roles: investigación/debugging (encontrar la causa real antes de aceptar la hipótesis) y datos (verificar contra el estado real, no contra lo que "debería" pasar).
+
+**La hipótesis del usuario era razonable pero incorrecta, y se lo verificó antes de descartarla** (regla fundamental de Consejo: no confirmar automáticamente lo que el usuario piensa, pero tampoco rechazarlo sin comprobar): `unit_label` no interviene en ningún cálculo de `product_replenishment` — se puede confirmar leyendo la vista, no participa en ninguna condición de `should_restock`. Cambiar la unidad de un producto no puede, por diseño, generar esta alerta.
+
+**Causa real, encontrada consultando los datos, no adivinada**: la vista `product_replenishment` (Fase 8) calcula `avg_daily_consumption` contando eventos `stock_movements` con `delta < 0` en los últimos 90 días (si hay 2 o más, los toma como "consumo real"), dividido por los días transcurridos desde el primero (con un piso de `greatest(1, ...)` para evitar dividir por cero). Sobre "Aceite de oliva genérico" había exactamente 3 pares `-1` seguido de `+1` — cada uno tocado el mismo día, en 3 rondas distintas de esta sesión probando el stepper de cantidad de Stock. La fórmula sumó los tres `-1` (3 unidades "consumidas") y los dividió por `greatest(1, 0 días transcurridos)` = 1, dando `avg_daily_consumption = 3` unidades por día — sobre un producto cuya cantidad neta nunca cambió (arrancó en 1 y sigue en 1, cada `-1` se revirtió al toque con su `+1`). Con eso, `estimated_days_remaining = 1/3 ≈ 0.33 días`, por debajo del umbral de 3 días que dispara `'prediccion'` — la alerta que vio el usuario.
+
+**Arreglo**: se agregó una condición a la fórmula — además de exigir 2+ eventos de consumo, ahora exige que hayan pasado al menos 3 días reales entre el primer evento detectado y el momento actual antes de confiar en la predicción. Un par de toques de prueba (o una corrección) el mismo día ya no alcanza para inventar una tasa diaria; hace falta evidencia real distribuida en el tiempo, no solo en cantidad de eventos.
+
+**Verificado directamente sobre el bug real** (no simulado — el bug estaba efectivamente activo en los datos reales al momento de investigar): antes del arreglo, `product_replenishment` mostraba `avg_daily_consumption=3`, `restock_reason='prediccion'` para "Aceite de oliva genérico", y era el único producto del hogar afectado por esta condición hoy. Después de aplicar el arreglo (una vista, se recalcula sola, sin tocar ningún dato histórico): `avg_daily_consumption=null`, `should_restock=false`, `restock_reason=null` para ese producto, y 0 productos del hogar quedan con `restock_reason='prediccion'`. `mcp__Supabase__get_advisors` sin hallazgos de seguridad nuevos. El texto de la vista en la base real (`pg_get_viewdef`) coincide carácter por carácter con la migración guardada. Sin cambios de frontend — la UI ya leía correctamente estos campos, el bug era puramente de la fórmula en la base.
+
+---
+
 ## Fase 24: eliminar definitivamente productos archivados
 
 Pedido del usuario, con motivo concreto: hay productos del import inicial (Fase 1) archivados por ser duplicados, ambiguos o incompletos, y "no tiene sentido archivarlos para siempre". Roles: integridad de datos (qué se pierde realmente al borrar) y seguridad/RLS (dónde debe vivir la restricción).
