@@ -383,3 +383,9 @@ El usuario preguntó dónde ver las fechas de compra de cada producto, o el hist
 - **Reportes**: se le agregaron pestañas ("Resumen" / "Historial", mismo patrón que Stock/Vencimientos). "Historial" lista las compras más recientes (fecha, súper, cantidad de productos, total si se cargó precio) y cada una se puede tocar para expandir el detalle línea por línea.
 
 Sin cambios de esquema — reutiliza `purchases`/`purchase_items`/`stores` tal cual y el `last_restocked_at` de Fase 8. Verificado con `tsc --noEmit`, `npm run lint` y `npm run build` limpios.
+
+---
+
+## Corrección: "Pan" es pan de molde comercial, no de panadería
+
+En la revisión de vencimientos con fuentes oficiales se había dejado "Pan" en 3 días asumiendo (JUICIO, declarado como tal en ese momento) que era pan de panadería fresco sin conservantes, en base a su alta frecuencia histórica de compra. El usuario corrigió ese supuesto directamente: es pan de molde comercial envasado. Se actualizó `default_shelf_life_days` de 3 a **14 días**, alineado con la guía ya citada en la revisión anterior para pan comercial envasado (14-18 días sin abrir en la despensa). No había ningún vencimiento activo sembrado para Pan en este momento (ya se había resuelto en la limpieza de Fase 10), así que no hizo falta recalcular ninguna fecha ya cargada — el nuevo valor rige desde la próxima compra. `restock_cycle_days` se mantiene sin ciclo: con 14 días de vida útil, Vencimientos ya avisa a tiempo, un ciclo aparte seguiría siendo redundante. Cambio de dato puro, sin tocar esquema ni código.
