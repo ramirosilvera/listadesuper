@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button, Card } from "@/components/ui";
 
-type ArchivedProduct = { id: string; name: string };
+type ArchivedProduct = { id: string; name: string; hasRealPurchases: boolean };
 
 export function AjustesClient({
   household,
@@ -22,6 +22,9 @@ export function AjustesClient({
   const [copied, setCopied] = useState(false);
   const [archivedProducts, setArchivedProducts] = useState(initialArchivedProducts);
   const [restoringId, setRestoringId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   async function copyCode() {
     if (!household.invite_code) return;
@@ -57,6 +60,32 @@ export function AjustesClient({
       setArchivedProducts((prev) => prev.filter((p) => p.id !== product.id));
       router.refresh();
     }
+  }
+
+  // Borrado real (no soft-delete): la RLS de "products" ya rechaza esto
+  // si el producto no está archivado o si tiene compras reales
+  // (purchase_items) -- acá solo se ofrece el botón cuando
+  // hasRealPurchases es false, así que en el uso normal esto no debería
+  // chocar con la policy, pero igual se chequea la respuesta por si dos
+  // pestañas del hogar hacen algo a la vez.
+  async function deleteProduct(product: ArchivedProduct) {
+    setDeletingId(product.id);
+    setDeleteError(null);
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("products")
+      .delete()
+      .eq("id", product.id)
+      .select("id");
+    setDeletingId(null);
+    setConfirmDeleteId(null);
+    if (error || !data || data.length === 0) {
+      setDeleteError(
+        `No se pudo eliminar "${product.name}". Puede que ya no esté archivado o que tenga alguna compra registrada.`,
+      );
+      return;
+    }
+    setArchivedProducts((prev) => prev.filter((p) => p.id !== product.id));
   }
 
   async function logout() {
@@ -119,21 +148,69 @@ export function AjustesClient({
           </p>
           <ul className="mt-3 divide-y divide-zinc-100 dark:divide-zinc-900">
             {archivedProducts.map((p) => (
-              <li key={p.id} className="flex items-center gap-2 py-2">
-                <span className="flex-1 text-sm text-zinc-700 dark:text-zinc-300">
-                  {p.name}
-                </span>
-                <button
-                  type="button"
-                  disabled={restoringId === p.id}
-                  onClick={() => restoreProduct(p)}
-                  className="min-h-9 select-none touch-manipulation rounded-full bg-zinc-100 px-3 text-xs font-medium text-zinc-700 active:bg-zinc-200 disabled:opacity-50 dark:bg-zinc-800 dark:text-zinc-300 dark:active:bg-zinc-700"
-                >
-                  {restoringId === p.id ? "Restaurando…" : "Reactivar"}
-                </button>
+              <li key={p.id} className="flex flex-col gap-1.5 py-2">
+                <div className="flex items-center gap-2">
+                  <span className="flex-1 text-sm text-zinc-700 dark:text-zinc-300">
+                    {p.name}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={restoringId === p.id}
+                    onClick={() => restoreProduct(p)}
+                    className="min-h-9 select-none touch-manipulation rounded-full bg-zinc-100 px-3 text-xs font-medium text-zinc-700 active:bg-zinc-200 disabled:opacity-50 dark:bg-zinc-800 dark:text-zinc-300 dark:active:bg-zinc-700"
+                  >
+                    {restoringId === p.id ? "Restaurando…" : "Reactivar"}
+                  </button>
+                  {!p.hasRealPurchases && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDeleteError(null);
+                        setConfirmDeleteId(p.id);
+                      }}
+                      className="min-h-9 select-none touch-manipulation rounded-full px-3 text-xs font-medium text-red-600 active:bg-red-50 dark:text-red-400 dark:active:bg-red-950"
+                    >
+                      Eliminar
+                    </button>
+                  )}
+                </div>
+
+                {p.hasRealPurchases && (
+                  <p className="text-xs text-zinc-400">
+                    Tiene compras reales registradas — se mantiene archivado
+                    para no perder ese gasto en Reportes.
+                  </p>
+                )}
+
+                {confirmDeleteId === p.id && (
+                  <div className="flex flex-wrap items-center gap-2 rounded-lg bg-red-50 px-2.5 py-2 text-xs text-red-800 dark:bg-red-950 dark:text-red-300">
+                    <span className="flex-1">
+                      ¿Eliminar &quot;{p.name}&quot; definitivamente? A diferencia de
+                      archivar, esto no se puede deshacer.
+                    </span>
+                    <button
+                      type="button"
+                      disabled={deletingId === p.id}
+                      onClick={() => deleteProduct(p)}
+                      className="min-h-8 select-none touch-manipulation rounded-full bg-red-600 px-3 text-xs font-medium text-white active:bg-red-700 disabled:opacity-50"
+                    >
+                      {deletingId === p.id ? "Eliminando…" : "Sí, eliminar"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmDeleteId(null)}
+                      className="min-h-8 select-none touch-manipulation rounded-full px-2 text-xs text-red-700 dark:text-red-300"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                )}
               </li>
             ))}
           </ul>
+          {deleteError && (
+            <p className="mt-2 text-xs text-red-600 dark:text-red-400">{deleteError}</p>
+          )}
         </Card>
       )}
 
