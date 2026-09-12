@@ -71,12 +71,24 @@ export function StockClient({
       prev.map((p) => (p.id === product.id ? { ...p, quantity_on_hand: next } : p)),
     );
 
-    await supabase.rpc("adjust_stock", {
+    const { error } = await supabase.rpc("adjust_stock", {
       p_household_id: householdId,
       p_product_id: product.id,
       p_delta: realDelta,
       p_reason: "manual_adjust",
     });
+
+    // Sin esto, si el RPC fallaba (red, error del server) el cambio
+    // optimista de arriba quedaba visualmente aplicado aunque el server
+    // nunca lo haya guardado -- la pantalla mostraba un número que no
+    // era real. Se deshace el cambio local para que vuelva a coincidir.
+    if (error) {
+      setProducts((prev) =>
+        prev.map((p) =>
+          p.id === product.id ? { ...p, quantity_on_hand: product.quantity_on_hand } : p,
+        ),
+      );
+    }
   }
 
   // Umbral de stock y ciclo de compra se editan juntos en un solo panel

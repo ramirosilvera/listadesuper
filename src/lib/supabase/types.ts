@@ -816,6 +816,10 @@ export type Database = {
         Returns: undefined
       }
       generate_invite_code: { Args: never; Returns: string }
+      increment_list_item_quantity: {
+        Args: { p_delta: number; p_item_id: string }
+        Returns: number
+      }
       join_household_by_code: {
         Args: { p_invite_code: string }
         Returns: string

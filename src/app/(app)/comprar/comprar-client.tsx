@@ -107,18 +107,25 @@ export function ComprarClient({
 
   function addRow(product: Product) {
     setQuery("");
-    setRows((prev) => [
-      ...prev,
-      {
-        key: product.id,
-        product_id: product.id,
-        name: product.name,
-        unit_label: product.unit_label,
-        quantity: 1,
-        unit_price: "",
-        expiration_date: suggestExpiration(product.default_shelf_life_days),
-      },
-    ]);
+    setRows((prev) => {
+      // El desplegable de sugerencias ya excluye productos que están en
+      // `rows`, pero el submit de "+ Agregar X" (addNewProduct) no pasa
+      // por esa lista — sin este chequeo, escribir el nombre de un
+      // producto ya cargado y confirmar agregaba una segunda fila igual.
+      if (prev.some((r) => r.product_id === product.id)) return prev;
+      return [
+        ...prev,
+        {
+          key: product.id,
+          product_id: product.id,
+          name: product.name,
+          unit_label: product.unit_label,
+          quantity: 1,
+          unit_price: "",
+          expiration_date: suggestExpiration(product.default_shelf_life_days),
+        },
+      ];
+    });
     setSuggestions((prev) => prev.filter((s) => s.product_id !== product.id));
   }
 
@@ -126,6 +133,19 @@ export function ComprarClient({
     e.preventDefault();
     const name = query.trim();
     if (!name) return;
+
+    // Mismo chequeo que ya hace Lista antes de crear un producto nuevo:
+    // sin esto, tipear el nombre completo y confirmar (en vez de tocar
+    // la sugerencia del desplegable) creaba un producto duplicado que
+    // fragmenta stock e historial desde ese momento.
+    const existing = allProducts.find(
+      (p) => p.name.toLowerCase() === name.toLowerCase(),
+    );
+    if (existing) {
+      addRow(existing);
+      return;
+    }
+
     const { data: product, error } = await supabase
       .from("products")
       .insert({ household_id: householdId, name })

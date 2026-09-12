@@ -177,14 +177,21 @@ export function ShoppingListClient({
   }
 
   async function changeQuantity(item: ListItem, delta: number) {
+    // Optimista para que se sienta instantáneo, pero el guardado real es
+    // un delta atómico en la base (increment_list_item_quantity), no un
+    // valor absoluto calculado acá -- si dos personas del hogar tocan
+    // +/- sobre el mismo ítem casi al mismo tiempo, un UPDATE con el
+    // valor absoluto que cada una calculó localmente puede pisar el
+    // incremento de la otra. El realtime ya existente corrige cualquier
+    // diferencia entre lo optimista y lo que terminó quedando en la base.
     const next = Math.max(1, item.quantity + delta);
     setItems((prev) =>
       prev.map((it) => (it.id === item.id ? { ...it, quantity: next } : it)),
     );
-    await supabase
-      .from("shopping_list_items")
-      .update({ quantity: next })
-      .eq("id", item.id);
+    await supabase.rpc("increment_list_item_quantity", {
+      p_item_id: item.id,
+      p_delta: delta,
+    });
   }
 
   async function removeItem(item: ListItem) {

@@ -85,8 +85,17 @@ export function OnboardingForm() {
         ) : (
           <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
             Código de invitación
+            {/*
+              Sin "uppercase" a propósito: el código es case-sensitive
+              (generate_invite_code mezcla mayúsculas y minúsculas) y
+              compara con "=" exacto -- si el CSS lo mostraba todo en
+              mayúsculas mientras el valor real tecleado podía tener
+              minúsculas, alguien tipeándolo a mano (no desde el link de
+              WhatsApp) veía un código que no coincidía con lo que en
+              realidad estaba mandando, y fallaba sin motivo aparente.
+            */}
             <Input
-              className="mt-1 uppercase"
+              className="mt-1"
               placeholder="Ej: aB3xY9_k"
               required
               value={code}

@@ -26,16 +26,30 @@ function isStandalone(): boolean {
   );
 }
 
+// localStorage puede tirar (Safari en modo privado más viejo, storage
+// lleno) -- sin el try/catch, eso rompía el efecto que decide qué rama
+// mostrar (o el handler de "Ahora no"), no solo el guardado del dismiss.
+// El peor caso sin protección es un banner no crítico; con protección,
+// en el peor caso simplemente vuelve a aparecer la próxima vez.
 function isDismissedForNow(): boolean {
-  const raw = window.localStorage.getItem(DISMISS_KEY);
-  return raw != null && Number(raw) > Date.now();
+  try {
+    const raw = window.localStorage.getItem(DISMISS_KEY);
+    return raw != null && Number(raw) > Date.now();
+  } catch {
+    return false;
+  }
 }
 
 function dismissForNow() {
-  window.localStorage.setItem(
-    DISMISS_KEY,
-    String(Date.now() + DISMISS_DAYS * 24 * 60 * 60 * 1000),
-  );
+  try {
+    window.localStorage.setItem(
+      DISMISS_KEY,
+      String(Date.now() + DISMISS_DAYS * 24 * 60 * 60 * 1000),
+    );
+  } catch {
+    // No pasa nada si no se pudo guardar -- el banner puede volver a
+    // aparecer antes de lo esperado, no es grave.
+  }
 }
 
 // Heurística de "estamos dentro del navegador embebido de otra app"
