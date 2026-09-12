@@ -83,7 +83,6 @@ export default async function StockPage() {
       householdId={household.id}
       products={rows}
       categories={categories ?? []}
-      expirationsCount={expirationRows.length}
       initialExpirations={expirationRows}
     />
   );

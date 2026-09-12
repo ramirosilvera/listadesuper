@@ -57,6 +57,16 @@ export function VencimientosTab({
   const [confirmDiscardId, setConfirmDiscardId] = useState<string | null>(null);
   const [errorId, setErrorId] = useState<string | null>(null);
   const [bannerDismissed, setBannerDismissed] = useState(true);
+  // Sobre el hogar real, esta pestaña tenía 106 vencimientos listados
+  // pero solo 1 vence dentro de los próximos 7 días (mediana: 179 días
+  // -- la mayoría son estimaciones de arranque a meses o años, Fase 6).
+  // Ver 106 filas para encontrar la 1 que importa hoy es exactamente la
+  // experiencia que el usuario reportó como desagradable. Por defecto
+  // se muestra solo lo próximo (mismo criterio expired/red/amber que ya
+  // usan los colores de cada fila), con un toggle explícito para ver
+  // todo -- nunca se oculta nada permanentemente, solo se prioriza qué
+  // se ve primero.
+  const [timeFilter, setTimeFilter] = useState<"soon" | "all">("soon");
 
   // Arranca oculto (bannerDismissed=true) para que SSR e hidratación
   // coincidan -- localStorage no existe en el server. Se corrige una sola
@@ -83,6 +93,12 @@ export function VencimientosTab({
   const hasEstimated = initialExpirations.some(
     (e) => e.purchase_item_id === null && !e.confirmed_by_user,
   );
+
+  const isSoon = (e: Expiration) =>
+    e.level === "expired" || e.level === "red" || e.level === "amber";
+  const soonCount = expirations.filter(isSoon).length;
+  const visibleExpirations =
+    timeFilter === "soon" ? expirations.filter(isSoon) : expirations;
 
   async function resolve(id: string, status: "consumed" | "discarded") {
     setErrorId(null);
@@ -159,6 +175,37 @@ export function VencimientosTab({
 
   return (
     <div className="flex flex-col gap-3">
+      <div className="flex gap-1 self-start rounded-full bg-zinc-100 p-1 text-sm font-medium dark:bg-zinc-900">
+        <button
+          type="button"
+          onClick={() => setTimeFilter("soon")}
+          className={`select-none touch-manipulation rounded-full px-3 py-1.5 transition-colors ${timeFilter === "soon" ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50" : "text-zinc-500"}`}
+        >
+          Próximos {soonCount > 0 ? `(${soonCount})` : ""}
+        </button>
+        <button
+          type="button"
+          onClick={() => setTimeFilter("all")}
+          className={`select-none touch-manipulation rounded-full px-3 py-1.5 transition-colors ${timeFilter === "all" ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50" : "text-zinc-500"}`}
+        >
+          Todos ({expirations.length})
+        </button>
+      </div>
+
+      {timeFilter === "soon" && visibleExpirations.length === 0 && (
+        <p className="rounded-xl bg-zinc-50 py-8 text-center text-sm text-zinc-500 dark:bg-zinc-900/60">
+          Nada vence pronto — buena noticia.
+          <br />
+          <button
+            type="button"
+            onClick={() => setTimeFilter("all")}
+            className="mt-1 text-zinc-600 underline decoration-dotted dark:text-zinc-400"
+          >
+            Ver los {expirations.length} más lejanos
+          </button>
+        </p>
+      )}
+
       {hasEstimated && !bannerDismissed && (
         <div className="flex items-start gap-2 rounded-xl bg-zinc-100 px-3 py-2.5 text-xs text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400">
           <span className="flex-1">
@@ -177,8 +224,9 @@ export function VencimientosTab({
           </button>
         </div>
       )}
+      {visibleExpirations.length > 0 && (
       <ul className="overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-800">
-      {expirations.map((exp) => {
+      {visibleExpirations.map((exp) => {
         const style = LEVEL_STYLES[exp.level ?? "green"] ?? LEVEL_STYLES.green;
         const confirming = confirmDiscardId === exp.id;
         const isEstimated = exp.purchase_item_id === null && !exp.confirmed_by_user;
@@ -271,6 +319,7 @@ export function VencimientosTab({
         );
       })}
       </ul>
+      )}
     </div>
   );
 }

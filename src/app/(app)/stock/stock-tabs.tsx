@@ -33,18 +33,24 @@ export function StockTabs({
   householdId,
   products,
   categories,
-  expirationsCount,
   initialExpirations,
 }: {
   householdId: string;
   products: Product[];
   categories: Category[];
-  expirationsCount: number;
   initialExpirations: Expiration[];
 }) {
   const [tab, setTab] = useState<"stock" | "vencimientos">("stock");
-  const urgentCount = initialExpirations.filter(
-    (e) => e.level === "expired" || e.level === "red",
+  // El número de esta solapa mostraba el total (hoy, 106 en el hogar
+  // real -- casi todos vencimientos estimados a meses o años, ver Fase
+  // "filtros en Vencimientos"). Mostrar ese número grande antes incluso
+  // de entrar a la pestaña ya contribuía a la sensación de lista
+  // abrumadora que reportó el usuario -- se cambia a contar solo lo que
+  // vence pronto (expired/red/amber, <=7 días), mismo criterio que ahora
+  // usa el filtro "Próximos" por defecto dentro de la pestaña. Si no hay
+  // nada próximo, no se muestra número: no hay nada urgente que avisar.
+  const soonCount = initialExpirations.filter(
+    (e) => e.level === "expired" || e.level === "red" || e.level === "amber",
   ).length;
 
   return (
@@ -63,11 +69,9 @@ export function StockTabs({
           className={`relative flex-1 select-none touch-manipulation rounded-full py-2 transition-colors ${tab === "vencimientos" ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50" : "text-zinc-500"}`}
         >
           Vencimientos
-          {expirationsCount > 0 && (
-            <span
-              className={`ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-xs text-white ${urgentCount > 0 ? "bg-red-500" : "bg-zinc-400"}`}
-            >
-              {expirationsCount}
+          {soonCount > 0 && (
+            <span className="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-xs text-white">
+              {soonCount}
             </span>
           )}
         </button>

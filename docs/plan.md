@@ -717,6 +717,24 @@ Se revisó `src/app/layout.tsx`: el `viewport` ya tiene un comentario explícito
 
 ---
 
+## Notificaciones de vencimiento (respuesta) y filtros en Vencimientos
+
+El usuario preguntó cómo notifica la app cuando se vence un producto, y por separado pidió filtros en la pestaña de Vencimientos porque una lista de 106 ítems no es una experiencia útil. Roles: notificaciones/ingeniería (qué existe hoy, qué costaría agregar), UX (por qué 106 es demasiado y qué hacer al respecto), datos (medir antes de diseñar).
+
+**Respuesta directa a la pregunta, no dada por sentada**: se revisó todo el código en busca de cualquier mecanismo de aviso — Notification API, Push API, cron, Edge Function, email. **HECHO**: no existe ninguno. El único service worker de la app (`public/sw.js`, Fase 13) tiene un comentario propio explicando que existe solo para satisfacer el requisito técnico de Chrome para poder ofrecer "Agregar a inicio", y a propósito no cachea nada dinámico — no tiene ningún listener de `push`. La única señal hoy es pasiva: el número en la pestaña "Vencimientos" (visible solo si se abre la app) y la lista en sí. No hay ningún aviso que llegue solo, ni en el celular ni por otro medio.
+
+**JUICIO sobre construir notificaciones push ahora**: se decidió NO construirlas en esta ronda, y comunicarlo explícitamente en vez de callarlo. Web Push requeriría infraestructura nueva y considerable — claves VAPID, una tabla de suscripciones con su propia RLS, un `push` handler en el service worker, un flujo de permiso en el cliente, y sobre todo un proceso que corra solo todos los días (cron) para revisar vencimientos y disparar los avisos — nada de eso existe hoy, y no se puede probar de verdad sin un dispositivo real suscripto. Es una pieza legítima para una futura fase dedicada, no una fase agregada de paso dentro de un pedido que en el fondo pedía otra cosa (filtros). Se prioriza mejorar la señal dentro de la app, que sí es una mejora real y verificable hoy.
+
+**Investigación antes de diseñar el filtro**: se midió la distribución real de los 106 vencimientos del hogar antes de decidir cómo cortarla. **HECHO**: 0 vencidos, 0 en nivel rojo, 1 en nivel ámbar (vence en 7 días o menos), 105 en verde — mediana de 179 días para vencer, máximo 730 (dos años). 101 de los 106 siguen siendo estimaciones de arranque (Fase 6/20), no fechas confirmadas por una compra o corrección manual. Esto confirma exactamente el problema que describió el usuario: la lista está dominada por productos de vida útil larga con fechas estimadas muy lejanas, y encontrar el único ítem que de verdad importa hoy exige scrollear 105 filas irrelevantes.
+
+**Qué se construyó**:
+- **Filtro "Próximos" / "Todos" en Vencimientos** (`vencimientos-tab.tsx`), mismo estilo de pastilla ya usado para la solapa Stock/Vencimientos. "Próximos" reusa exactamente los mismos niveles de color que ya existían (`expired`/`red`/`amber`, es decir hasta 7 días) — no se inventó una cuarta categoría de urgencia distinta a la que ya se mostraba con colores. Arranca en "Próximos" por defecto; "Todos" queda a un toque, con el conteo real de ambos siempre visible en el propio botón (nunca se oculta el número total, solo se prioriza qué se ve primero). Cuando "Próximos" no tiene nada, un mensaje en tono positivo ("Nada vence pronto — buena noticia") en vez de una lista vacía sin contexto, con un enlace directo a "Ver los N más lejanos" — consistente con el principio de la Fase 20 de no generar alarma donde no la hay.
+- **El número en la pestaña "Vencimientos" también se corrigió** (`stock-tabs.tsx`): antes mostraba el total (106) apenas se entraba a Stock, contribuyendo a la sensación de lista abrumadora incluso antes de abrir la pestaña. Ahora muestra la misma cuenta de "próximos" que usa el filtro por defecto, y no muestra ningún número si no hay nada próximo — en vez de un "106" gris permanente, la pestaña queda limpia cuando no hace falta avisar nada.
+
+**Verificado**: `npm run build`/`npm run lint` limpios. Sin cambios de base de datos — el filtro es puramente de cliente sobre datos que ya se traían, reusando el campo `level` que ya calculaba la vista `product_expirations_upcoming` desde el Fase original de Vencimientos.
+
+---
+
 ## Fase 24: eliminar definitivamente productos archivados
 
 Pedido del usuario, con motivo concreto: hay productos del import inicial (Fase 1) archivados por ser duplicados, ambiguos o incompletos, y "no tiene sentido archivarlos para siempre". Roles: integridad de datos (qué se pierde realmente al borrar) y seguridad/RLS (dónde debe vivir la restricción).
