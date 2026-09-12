@@ -39,6 +39,17 @@ export function AjustesClient({
     }
   }
 
+  function shareViaWhatsApp() {
+    if (!household.invite_code) return;
+    // /join/<codigo> hace todo solo del otro lado: si quien recibe el link
+    // no tiene cuenta lo manda derecho a crear una, y despues de loguearse
+    // (con cuenta nueva o existente) lo une al hogar sin que tenga que
+    // copiar ni pegar el código en ningún lado.
+    const link = `${window.location.origin}/join/${household.invite_code}`;
+    const text = `Unite a nuestra lista de súper compartida "${household.name}" en ListaSuper: ${link}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+  }
+
   function seedInitialStock() {
     startSeed(async () => {
       const supabase = createClient();
@@ -93,18 +104,32 @@ export function AjustesClient({
       </Card>
 
       <Card>
-        <p className="text-sm text-zinc-500">Código de invitación</p>
+        <p className="text-sm text-zinc-500">Invitar a alguien al hogar</p>
+        <Button
+          className="mt-2 w-full gap-2"
+          disabled={!household.invite_code}
+          onClick={shareViaWhatsApp}
+        >
+          <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="currentColor" aria-hidden>
+            <path d="M17.5 14.4c-.3-.1-1.7-.8-1.9-.9-.3-.1-.4-.1-.6.1-.2.3-.7.9-.8 1-.1.2-.3.2-.5.1-.3-.1-1.2-.4-2.2-1.4-.8-.7-1.4-1.6-1.5-1.9-.2-.3 0-.5.1-.6.1-.1.3-.3.4-.5.1-.1.2-.3.2-.4.1-.2 0-.3 0-.5-.1-.1-.6-1.5-.9-2-.2-.6-.4-.5-.6-.5h-.5c-.2 0-.5.1-.7.3-.3.3-1 1-1 2.4s1 2.8 1.2 3c.1.2 2 3.1 4.9 4.3.7.3 1.2.5 1.6.6.7.2 1.3.2 1.8.1.5-.1 1.7-.7 1.9-1.4.2-.7.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3z" />
+            <path d="M12 2a10 10 0 0 0-8.5 15.2L2 22l4.9-1.4A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.1l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Z" />
+          </svg>
+          Compartir por WhatsApp
+        </Button>
         <div className="mt-2 flex items-center gap-2">
-          <code className="flex-1 rounded-lg bg-zinc-100 px-3 py-2 text-center text-lg font-semibold tracking-widest dark:bg-zinc-900">
+          <code className="flex-1 rounded-lg bg-zinc-100 px-3 py-2 text-center text-sm font-semibold tracking-widest dark:bg-zinc-900">
             {household.invite_code ?? "—"}
           </code>
           <Button variant="secondary" onClick={copyCode}>
-            {copied ? "Copiado" : "Copiar"}
+            {copied ? "Copiado" : "Copiar código"}
           </Button>
         </div>
         <p className="mt-2 text-xs text-zinc-500">
-          Compartiselo a quien quieras sumar al hogar — lo usa desde
-          &quot;Unirme con código&quot; al entrar por primera vez.
+          Quien abra el link se crea la cuenta (o entra, si ya tiene) y
+          queda unido al hogar solo — no hace falta que copie ni pegue
+          ningún código. El código de arriba es por si preferís
+          compartirlo de otra forma; se pega desde &quot;Unirme con
+          código&quot; al entrar por primera vez.
         </p>
       </Card>
 

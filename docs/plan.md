@@ -273,4 +273,17 @@ No se tocó el fondo oscuro en sí (`#0a0a0a`): es el modo oscuro correcto de la
 
 Verificado con `tsc --noEmit`, `npm run lint` y `npm run build` limpios.
 
+---
+
+## Fase 9: invitar por WhatsApp con unión automática
+
+El usuario pidió que el código de invitación se pueda compartir directamente por WhatsApp y que quien recibe el link termine unido al hogar solo — sin pegar el código a mano, y creando cuenta de una si todavía no tiene.
+
+- **`/join/[codigo]`** (nueva ruta, fuera del grupo `(app)` porque es justo para gente que todavía no tiene hogar): sin sesión, redirige a `/login?mode=signup&next=/join/<codigo>`; con sesión y sin hogar, llama a `join_household_by_code` (la misma RPC que ya existía para el flujo manual) y redirige a `/lista`; con sesión y ya con un hogar, muestra un aviso en vez de unir en silencio — el modelo de datos sigue siendo "un hogar activo por usuario" (MVP), así que unir sin avisar hubiera dejado el hogar "activo" en un estado ambiguo.
+- **Login** ahora lee `next` y `mode` de la URL (`useSearchParams`, con el formulario movido a `login-form.tsx` y envuelto en `Suspense` en `page.tsx` — Next.js exige ese boundary para no perder el prerender estático de la página): entrar o crear cuenta redirige a `next` si vino uno, en vez de siempre a `/`. Así el link hace todo el circuito en una sola pasada: sin cuenta → crear cuenta → unido al hogar; con cuenta → entrar → unido al hogar.
+- **Ajustes**: botón "Compartir por WhatsApp" (`wa.me/?text=...`, sin SDK, funciona igual en el celular con la app instalada y en WhatsApp Web) que arma el mensaje con el link `/join/<codigo>`. El código a secas sigue visible abajo por si prefieren compartirlo de otra forma (setelo dicho de palabra, otro medio) — no se sacó el flujo manual de "Unirme con código" en Onboarding.
+- Metadata propia en `/join/[codigo]` (título/descripción para que la vista previa del link en WhatsApp no salga en blanco, `robots: noindex` porque es un link de invitación, no algo para indexar).
+
+Sin cambios de esquema — reutiliza `join_household_by_code` tal cual. Verificado con `tsc --noEmit`, `npm run lint` y `npm run build` limpios (`/join/[code]` sale dinámica, `/login` se mantiene estática pese al `useSearchParams` gracias al `Suspense`).
+
 No se armó splash screen específico para iOS (`apple-touch-startup-image` por tamaño de dispositivo) — es papeleo de bajo impacto para un hogar de 2 personas; se puede sumar más adelante si se nota falta.
