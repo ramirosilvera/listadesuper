@@ -1,7 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+
+const BANNER_DISMISS_KEY = "listasuper:vencimientos-estimado-banner-dismissed";
 
 type Expiration = {
   id: string;
@@ -11,6 +13,8 @@ type Expiration = {
   quantity: number | null;
   days_until: number | null;
   level: string | null;
+  purchase_item_id: string | null;
+  confirmed_by_user: boolean | null;
 };
 
 const LEVEL_STYLES: Record<
@@ -52,6 +56,33 @@ export function VencimientosTab({
   const [dateDraft, setDateDraft] = useState("");
   const [confirmDiscardId, setConfirmDiscardId] = useState<string | null>(null);
   const [errorId, setErrorId] = useState<string | null>(null);
+  const [bannerDismissed, setBannerDismissed] = useState(true);
+
+  // Arranca oculto (bannerDismissed=true) para que SSR e hidratación
+  // coincidan -- localStorage no existe en el server. Se corrige una sola
+  // vez al montar, igual que install-prompt.tsx.
+  useEffect(() => {
+    try {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setBannerDismissed(window.localStorage.getItem(BANNER_DISMISS_KEY) === "1");
+    } catch {
+      // Sin acceso a localStorage, mejor mostrar el banner de más que
+      // arriesgarse a ocultar información que ayuda a confiar en la app.
+    }
+  }, []);
+
+  function dismissBanner() {
+    setBannerDismissed(true);
+    try {
+      window.localStorage.setItem(BANNER_DISMISS_KEY, "1");
+    } catch {
+      // No es grave si no se guarda -- puede volver a aparecer.
+    }
+  }
+
+  const hasEstimated = initialExpirations.some(
+    (e) => e.purchase_item_id === null && !e.confirmed_by_user,
+  );
 
   async function resolve(id: string, status: "consumed" | "discarded") {
     setErrorId(null);
@@ -82,9 +113,15 @@ export function VencimientosTab({
       return;
     }
     setEditingId(null);
+    // Al corregir la fecha a mano, el dato deja de ser una estimación de
+    // arranque (ver seed_initial_stock, Fase 6) y pasa a ser lo que la
+    // familia realmente sabe -- por eso confirmed_by_user se marca acá,
+    // no solo cuando la fecha viene de una compra real (purchase_item_id).
+    // Sin esto, la etiqueta "aprox." quedaría pegada para siempre incluso
+    // después de que alguien la corrija a mano.
     const { error } = await supabase
       .from("product_expirations")
-      .update({ expiration_date: dateDraft })
+      .update({ expiration_date: dateDraft, confirmed_by_user: true })
       .eq("id", id);
     if (!error) {
       const today = new Date();
@@ -97,7 +134,13 @@ export function VencimientosTab({
         prev
           .map((e) =>
             e.id === id
-              ? { ...e, expiration_date: dateDraft, days_until: daysUntil, level }
+              ? {
+                  ...e,
+                  expiration_date: dateDraft,
+                  days_until: daysUntil,
+                  level,
+                  confirmed_by_user: true,
+                }
               : e,
           )
           .sort((a, b) => (a.expiration_date ?? "").localeCompare(b.expiration_date ?? "")),
@@ -115,10 +158,30 @@ export function VencimientosTab({
   }
 
   return (
-    <ul className="overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-800">
+    <div className="flex flex-col gap-3">
+      {hasEstimated && !bannerDismissed && (
+        <div className="flex items-start gap-2 rounded-xl bg-zinc-100 px-3 py-2.5 text-xs text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400">
+          <span className="flex-1">
+            Estas fechas arrancaron como un cálculo a partir de tu historial,
+            no todas vienen de una compra confirmada. Las marcadas{" "}
+            <span className="font-medium">aprox.</span> se ajustan solas en
+            cuanto las toques.
+          </span>
+          <button
+            type="button"
+            onClick={dismissBanner}
+            aria-label="Cerrar aviso"
+            className="shrink-0 select-none touch-manipulation rounded-full px-1 text-zinc-400 active:text-zinc-600 dark:active:text-zinc-300"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+      <ul className="overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-800">
       {expirations.map((exp) => {
         const style = LEVEL_STYLES[exp.level ?? "green"] ?? LEVEL_STYLES.green;
         const confirming = confirmDiscardId === exp.id;
+        const isEstimated = exp.purchase_item_id === null && !exp.confirmed_by_user;
         return (
           <li
             key={exp.id}
@@ -150,6 +213,7 @@ export function VencimientosTab({
                     className={`mt-0.5 inline-block rounded-full px-2 py-0.5 text-xs font-medium underline decoration-dotted ${style.badge}`}
                   >
                     {style.label(exp.days_until)}
+                    {isEstimated ? " · aprox." : ""}
                   </button>
                 )}
               </div>
@@ -204,6 +268,7 @@ export function VencimientosTab({
           </li>
         );
       })}
-    </ul>
+      </ul>
+    </div>
   );
 }

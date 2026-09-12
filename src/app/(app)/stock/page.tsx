@@ -15,7 +15,7 @@ export default async function StockPage() {
     { data: stock },
     { data: categories },
     { data: expirations },
-    { data: replenishment },
+    { data: realPurchases },
   ] = await Promise.all([
     supabase
       .from("products")
@@ -34,20 +34,35 @@ export default async function StockPage() {
       .order("sort_order", { ascending: true }),
     supabase
       .from("product_expirations_upcoming")
-      .select("id, product_name, unit_label, expiration_date, quantity, days_until, level")
+      .select(
+        "id, product_name, unit_label, expiration_date, quantity, days_until, level, purchase_item_id, confirmed_by_user",
+      )
       .eq("household_id", household.id),
+    // Fase 20: "Última compra" solo debe mostrarse para una compra REAL
+    // (reason='purchase'), no para la carga inicial de Fase 6 -- mostrar
+    // "Última compra: 11/09" para algo que en realidad nunca se compró,
+    // solo se cargó como punto de partida, es engañoso (ver docs/plan.md,
+    // pedido de UX para que los datos de arranque se lean como estimados,
+    // no como hechos confirmados).
     supabase
-      .from("product_replenishment")
-      .select("product_id, last_restocked_at")
-      .eq("household_id", household.id),
+      .from("stock_movements")
+      .select("product_id, created_at")
+      .eq("household_id", household.id)
+      .eq("reason", "purchase")
+      .order("created_at", { ascending: false }),
   ]);
 
   const stockByProduct = new Map(
     (stock ?? []).map((s) => [s.product_id, s.quantity_on_hand ?? 0]),
   );
-  const lastRestockByProduct = new Map(
-    (replenishment ?? []).map((r) => [r.product_id, r.last_restocked_at]),
-  );
+  // Ya viene ordenado desc, así que la primera ocurrencia de cada
+  // product_id es su compra real más reciente.
+  const lastRestockByProduct = new Map<string, string>();
+  for (const m of realPurchases ?? []) {
+    if (!lastRestockByProduct.has(m.product_id)) {
+      lastRestockByProduct.set(m.product_id, m.created_at);
+    }
+  }
 
   const rows = (products ?? []).map((p) => ({
     ...p,

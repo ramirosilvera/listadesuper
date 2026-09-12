@@ -25,6 +25,8 @@ type Expiration = {
   quantity: number | null;
   days_until: number | null;
   level: string | null;
+  purchase_item_id: string | null;
+  confirmed_by_user: boolean | null;
 };
 
 export function StockTabs({

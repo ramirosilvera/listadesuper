@@ -1,8 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Input } from "@/components/ui";
+
+const BANNER_DISMISS_KEY = "listasuper:stock-estimado-banner-dismissed";
 
 type Product = {
   id: string;
@@ -36,6 +38,30 @@ export function StockClient({
   const [cycleDraft, setCycleDraft] = useState("");
   const [confirmArchiveId, setConfirmArchiveId] = useState<string | null>(null);
   const [archiving, setArchiving] = useState<string | null>(null);
+  const [bannerDismissed, setBannerDismissed] = useState(true);
+
+  useEffect(() => {
+    try {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setBannerDismissed(window.localStorage.getItem(BANNER_DISMISS_KEY) === "1");
+    } catch {
+      // Sin acceso a localStorage, mejor mostrar el banner de más.
+    }
+  }, []);
+
+  function dismissBanner() {
+    setBannerDismissed(true);
+    try {
+      window.localStorage.setItem(BANNER_DISMISS_KEY, "1");
+    } catch {
+      // No es grave si no se guarda.
+    }
+  }
+
+  const hasEstimatedStock = useMemo(
+    () => initialProducts.some((p) => !p.last_restocked_at && p.quantity_on_hand > 0),
+    [initialProducts],
+  );
 
   const categoryById = useMemo(() => {
     const map = new Map<string, Category>();
@@ -157,6 +183,25 @@ export function StockClient({
         onChange={(e) => setQuery(e.target.value)}
       />
 
+      {hasEstimatedStock && !bannerDismissed && (
+        <div className="flex items-start gap-2 rounded-xl bg-zinc-100 px-3 py-2.5 text-xs text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400">
+          <span className="flex-1">
+            Las cantidades y los avisos arrancaron como un cálculo a partir
+            de tu historial de compras, no son un inventario exacto. Tocá
+            cualquier número, umbral o ciclo para ajustarlo a como compran
+            ustedes.
+          </span>
+          <button
+            type="button"
+            onClick={dismissBanner}
+            aria-label="Cerrar aviso"
+            className="shrink-0 select-none touch-manipulation rounded-full px-1 text-zinc-400 active:text-zinc-600 dark:active:text-zinc-300"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {grouped.length === 0 && (
         <p className="py-12 text-center text-sm text-zinc-500">
           Todavía no hay productos. Se van a ir sumando solos a medida que
@@ -202,10 +247,21 @@ export function StockClient({
                   />
                   <div className="min-w-0 flex-1">
                     <p className="text-sm text-zinc-900 dark:text-zinc-50">{p.name}</p>
-                    {p.last_restocked_at && (
+                    {p.last_restocked_at ? (
                       <p className="text-xs text-zinc-400">
                         Última compra: {LAST_RESTOCK_FMT.format(new Date(p.last_restocked_at))}
                       </p>
+                    ) : (
+                      p.quantity_on_hand > 0 && (
+                        // Este número vino de la carga inicial (seed_initial_stock,
+                        // Fase 6), no de una compra registrada todavía. Sin esta
+                        // aclaración se ve idéntico a un dato real y, si está mal,
+                        // parece un error de la app en vez de un punto de partida
+                        // editable -- tocar +/- ya lo corrige.
+                        <p className="text-xs text-zinc-400">
+                          Cantidad inicial, sin compra registrada todavía
+                        </p>
+                      )
                     )}
                     {!isEditingSettings && settingsSummary && (
                       <button

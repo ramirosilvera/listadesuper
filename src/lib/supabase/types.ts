@@ -101,6 +101,7 @@ export type Database = {
       }
       product_expirations: {
         Row: {
+          confirmed_by_user: boolean
           created_at: string
           expiration_date: string
           household_id: string
@@ -111,6 +112,7 @@ export type Database = {
           status: string
         }
         Insert: {
+          confirmed_by_user?: boolean
           created_at?: string
           expiration_date: string
           household_id: string
@@ -121,6 +123,7 @@ export type Database = {
           status?: string
         }
         Update: {
+          confirmed_by_user?: boolean
           created_at?: string
           expiration_date?: string
           household_id?: string
@@ -158,6 +161,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "top_products_90d"
             referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_expirations_purchase_item_id_fkey"
+            columns: ["purchase_item_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_items"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -616,6 +626,7 @@ export type Database = {
       }
       product_expirations_upcoming: {
         Row: {
+          confirmed_by_user: boolean | null
           days_until: number | null
           expiration_date: string | null
           household_id: string | null
@@ -623,6 +634,7 @@ export type Database = {
           level: string | null
           product_id: string | null
           product_name: string | null
+          purchase_item_id: string | null
           quantity: number | null
           unit_label: string | null
         }
@@ -654,6 +666,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "top_products_90d"
             referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_expirations_purchase_item_id_fkey"
+            columns: ["purchase_item_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_items"
+            referencedColumns: ["id"]
           },
         ]
       }
