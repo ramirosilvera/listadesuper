@@ -286,4 +286,14 @@ El usuario pidió que el código de invitación se pueda compartir directamente 
 
 Sin cambios de esquema — reutiliza `join_household_by_code` tal cual. Verificado con `tsc --noEmit`, `npm run lint` y `npm run build` limpios (`/join/[code]` sale dinámica, `/login` se mantiene estática pese al `useSearchParams` gracias al `Suspense`).
 
+---
+
+## Limpieza: tarjetas de uso único en Ajustes
+
+El usuario pidió sacar de Ajustes las tarjetas "Catálogo inicial" y "Stock inicial" (y todo su estado/handlers en `ajustes-client.tsx`): eran acciones de una sola vez, ya usadas para este hogar, y quedaban ahí sin ningún propósito recurrente.
+
+**Decisión de alcance**: se sacó el botón de la UI, pero **no** se borró `import-seed-action.ts` (el Server Action) ni la RPC `seed_initial_stock` — siguen existiendo como capacidad de backend, por si hiciera falta repetir el import o la carga inicial más adelante (otro hogar, un reseteo, productos nuevos en el CSV). Son inofensivos sin un botón que los dispare, y borrarlos hubiera sido un cambio más grande que "sacar las tarjetas" — si en algún momento se confirma que nunca más van a hacer falta, ahí sí tiene sentido borrarlos del todo.
+
+Verificado con `tsc --noEmit`, `npm run lint` y `npm run build` limpios (sin imports ni variables sin usar tras sacar el código muerto en el cliente).
+
 No se armó splash screen específico para iOS (`apple-touch-startup-image` por tamaño de dispositivo) — es papeleo de bajo impacto para un hogar de 2 personas; se puede sumar más adelante si se nota falta.
