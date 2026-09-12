@@ -21,6 +21,23 @@ type Category = { id: string; name: string; sort_order: number };
 
 const LAST_RESTOCK_FMT = new Intl.DateTimeFormat("es-AR", { day: "2-digit", month: "2-digit" });
 
+// "Vacío" siempre se marca (0 unidades es un hecho, no depende de gusto).
+// "Bajo" en cambio depende de low_stock_threshold, que cada quien
+// configura según cuánto quiere tener de ese producto -- sin threshold
+// configurado, no hay forma de saber si 1 unidad es "poco" o es
+// exactamente lo que se quiere tener (ej. "no quiero más de 1 aceite de
+// oliva genérico"), así que no se marca "bajo" por una regla fija como
+// <=1. Mismo criterio que ya usa product_replenishment.should_restock
+// (Fase 8) para el aviso de reposición -- no una tercera definición de
+// "poco stock" distinta a la que ya existe en el resto de la app.
+function stockLevel(p: Pick<Product, "quantity_on_hand" | "low_stock_threshold">) {
+  if (p.quantity_on_hand <= 0) return "empty" as const;
+  if (p.low_stock_threshold !== null && p.quantity_on_hand <= p.low_stock_threshold) {
+    return "low" as const;
+  }
+  return "ok" as const;
+}
+
 export function StockClient({
   householdId,
   products: initialProducts,
@@ -114,7 +131,7 @@ export function StockClient({
         const key = p.category_id ?? "_sin_categoria";
         if (key !== categoryFilter) return false;
       }
-      if (lowStockOnly && p.quantity_on_hand > 1) return false;
+      if (lowStockOnly && stockLevel(p) === "ok") return false;
       return true;
     });
   }, [searched, categoryFilter, lowStockOnly]);
@@ -356,12 +373,7 @@ export function StockClient({
           </h2>
           <ul className="overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-800">
             {group.items.map((p) => {
-              const level =
-                p.quantity_on_hand <= 0
-                  ? "empty"
-                  : p.quantity_on_hand <= 1
-                    ? "low"
-                    : "ok";
+              const level = stockLevel(p);
               const isEditingSettings = editingSettingsId === p.id;
               const settingsSummary = [
                 p.low_stock_threshold !== null ? `Avisar con ${p.low_stock_threshold}` : null,
