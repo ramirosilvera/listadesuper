@@ -7,15 +7,12 @@ import { Button, Card } from "@/components/ui";
 type PurchaseItem = {
   id: string;
   quantity: number;
-  unit_price: number | null;
-  subtotal: number | null;
   products: { name: string; unit_label: string } | null;
 };
 
 type Purchase = {
   id: string;
   purchased_at: string;
-  total_amount: number | null;
   stores: { name: string } | null;
   purchase_items: PurchaseItem[];
 };
@@ -23,7 +20,6 @@ type Purchase = {
 type DayGroup = {
   dayKey: string;
   purchases: Purchase[];
-  totalAmount: number | null;
   itemCount: number;
   storesLabel: string;
 };
@@ -55,10 +51,6 @@ const TIME_FMT = new Intl.DateTimeFormat("es-AR", {
   timeZone: TIMEZONE,
 });
 
-function money(n: number) {
-  return `$${n.toLocaleString("es-AR", { maximumFractionDigits: 0 })}`;
-}
-
 // Unifica compras cargadas por tandas el mismo día en una sola fila (a
 // pedido del usuario: cargar de a poco durante el día antes no generaba
 // "la compra del día" sino una fila por cada tanda). El array ya viene
@@ -75,11 +67,6 @@ function groupByDay(purchases: Purchase[]): DayGroup[] {
   }
 
   return [...byDay.entries()].map(([dayKey, dayPurchases]) => {
-    const amounts = dayPurchases
-      .map((p) => p.total_amount)
-      .filter((a): a is number => a != null);
-    const totalAmount =
-      amounts.length > 0 ? amounts.reduce((a, b) => a + b, 0) : null;
     const itemCount = dayPurchases.reduce(
       (sum, p) => sum + p.purchase_items.length,
       0,
@@ -98,7 +85,7 @@ function groupByDay(purchases: Purchase[]): DayGroup[] {
           ? storeNames[0]
           : storeNames.join(", ");
 
-    return { dayKey, purchases: dayPurchases, totalAmount, itemCount, storesLabel };
+    return { dayKey, purchases: dayPurchases, itemCount, storesLabel };
   });
 }
 
@@ -111,11 +98,6 @@ function ItemRow({ item }: { item: PurchaseItem }) {
       <span className="text-xs text-zinc-400">
         {item.quantity} {item.products?.unit_label ?? ""}
       </span>
-      {item.subtotal != null && (
-        <span className="w-16 text-right text-zinc-500">
-          {money(item.subtotal)}
-        </span>
-      )}
     </li>
   );
 }
@@ -158,7 +140,7 @@ function ExportPanel({
     let query = supabase
       .from("purchases")
       .select(
-        "id, purchased_at, total_amount, stores(name), purchase_items(id, quantity, unit_price, subtotal, products(name, unit_label))",
+        "id, purchased_at, stores(name), purchase_items(id, quantity, products(name, unit_label))",
       )
       .eq("household_id", householdId)
       .order("purchased_at", { ascending: true });
@@ -189,13 +171,10 @@ function ExportPanel({
           id: p.id,
           fecha: p.purchased_at,
           supermercado: p.stores?.name ?? null,
-          total: p.total_amount,
           items: p.purchase_items.map((it) => ({
             producto: it.products?.name ?? null,
             unidad: it.products?.unit_label ?? null,
             cantidad: it.quantity,
-            precio_unitario: it.unit_price,
-            subtotal: it.subtotal,
           })),
         })),
       },
@@ -319,11 +298,6 @@ export function PurchaseHistory({
                     {multi ? ` (${group.purchases.length} compras)` : ""}
                   </p>
                 </div>
-                {group.totalAmount != null && (
-                  <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
-                    {money(group.totalAmount)}
-                  </span>
-                )}
                 <svg
                   viewBox="0 0 24 24"
                   className={`h-4 w-4 shrink-0 text-zinc-400 transition-transform ${expanded ? "rotate-180" : ""}`}
@@ -346,14 +320,9 @@ export function PurchaseHistory({
                           key={purchase.id}
                           className="border-b border-zinc-100 last:border-b-0 dark:border-zinc-900"
                         >
-                          <div className="flex items-center justify-between px-4 pt-2.5 pb-1 text-xs text-zinc-500">
-                            <span>
-                              {TIME_FMT.format(new Date(purchase.purchased_at))} ·{" "}
-                              {purchase.stores?.name ?? "Sin especificar"}
-                            </span>
-                            {purchase.total_amount != null && (
-                              <span>{money(purchase.total_amount)}</span>
-                            )}
+                          <div className="px-4 pt-2.5 pb-1 text-xs text-zinc-500">
+                            {TIME_FMT.format(new Date(purchase.purchased_at))} ·{" "}
+                            {purchase.stores?.name ?? "Sin especificar"}
                           </div>
                           <ul className="divide-y divide-zinc-100 dark:divide-zinc-900">
                             {purchase.purchase_items.map((item) => (

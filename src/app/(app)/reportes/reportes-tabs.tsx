@@ -6,15 +6,6 @@ import { ReportesClient } from "./reportes-client";
 import { PurchaseHistory } from "./purchase-history";
 import { SuggestionsPanel, type ProductSuggestion } from "./suggestions-panel";
 
-type CategorySpend = {
-  category_id: string | null;
-  category_name: string | null;
-  total_amount: number | null;
-  item_count: number | null;
-};
-
-type WeekSpend = { week_start: string | null; total_amount: number | null };
-
 type TopProduct = {
   product_id: string | null;
   product_name: string | null;
@@ -24,15 +15,12 @@ type TopProduct = {
 type PurchaseItem = {
   id: string;
   quantity: number;
-  unit_price: number | null;
-  subtotal: number | null;
   products: { name: string; unit_label: string } | null;
 };
 
 type Purchase = {
   id: string;
   purchased_at: string;
-  total_amount: number | null;
   stores: { name: string } | null;
   purchase_items: PurchaseItem[];
 };
@@ -40,9 +28,6 @@ type Purchase = {
 export function ReportesTabs({
   householdId,
   householdName,
-  totalSpend30d,
-  byCategory,
-  byWeek,
   topProducts,
   urgentExpirations,
   restockCount,
@@ -51,9 +36,6 @@ export function ReportesTabs({
 }: {
   householdId: string;
   householdName: string;
-  totalSpend30d: number;
-  byCategory: CategorySpend[];
-  byWeek: WeekSpend[];
   topProducts: TopProduct[];
   urgentExpirations: number;
   restockCount: number;
@@ -83,9 +65,6 @@ export function ReportesTabs({
 
       {tab === "resumen" && (
         <ReportesClient
-          totalSpend30d={totalSpend30d}
-          byCategory={byCategory}
-          byWeek={byWeek}
           topProducts={topProducts}
           urgentExpirations={urgentExpirations}
           restockCount={restockCount}

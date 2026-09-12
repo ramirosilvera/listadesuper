@@ -12,22 +12,12 @@ export default async function ReportesPage() {
   const supabase = await createClient();
 
   const [
-    { data: byCategory },
-    { data: byWeek },
     { data: topProducts },
     { data: expirationsUpcoming },
     { data: replenishment },
     { data: purchases },
     { data: suggestions },
   ] = await Promise.all([
-    supabase
-      .from("spending_by_category_30d")
-      .select("category_id, category_name, total_amount, item_count")
-      .eq("household_id", household.id),
-    supabase
-      .from("spending_by_week")
-      .select("week_start, total_amount")
-      .eq("household_id", household.id),
     supabase
       .from("top_products_90d")
       .select("product_id, product_name, purchase_count")
@@ -50,7 +40,7 @@ export default async function ReportesPage() {
     supabase
       .from("purchases")
       .select(
-        "id, purchased_at, total_amount, stores(name), purchase_items(id, quantity, unit_price, subtotal, products(name, unit_label))",
+        "id, purchased_at, stores(name), purchase_items(id, quantity, products(name, unit_label))",
       )
       .eq("household_id", household.id)
       .order("purchased_at", { ascending: false })
@@ -63,10 +53,6 @@ export default async function ReportesPage() {
       .order("name", { ascending: true }),
   ]);
 
-  const totalSpend30d = (byCategory ?? []).reduce(
-    (sum, c) => sum + (c.total_amount ?? 0),
-    0,
-  );
   const urgentExpirations = (expirationsUpcoming ?? []).filter(
     (e) => e.level === "expired" || e.level === "red",
   ).length;
@@ -75,9 +61,6 @@ export default async function ReportesPage() {
     <ReportesTabs
       householdId={household.id}
       householdName={household.name}
-      totalSpend30d={totalSpend30d}
-      byCategory={byCategory ?? []}
-      byWeek={byWeek ?? []}
       topProducts={topProducts ?? []}
       urgentExpirations={urgentExpirations}
       restockCount={(replenishment ?? []).length}

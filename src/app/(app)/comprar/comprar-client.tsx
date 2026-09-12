@@ -35,7 +35,6 @@ type Row = {
   name: string;
   unit_label: string;
   quantity: number;
-  unit_price: string;
   expiration_date: string;
   // Por defecto la compra SUMA a lo que ya había en Stock (mismo
   // comportamiento de siempre). "Reemplaza" es para el caso en que el
@@ -85,7 +84,6 @@ export function ComprarClient({
         name: it.products!.name,
         unit_label: it.products!.unit_label,
         quantity: it.quantity,
-        unit_price: "",
         expiration_date: suggestExpiration(it.products!.default_shelf_life_days),
         replaceStock: false,
       })),
@@ -98,11 +96,6 @@ export function ComprarClient({
   const [error, setError] = useState<string | null>(null);
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
   const [newProductCategoryId, setNewProductCategoryId] = useState("");
-
-  const total = rows.reduce((sum, r) => {
-    const price = parseFloat(r.unit_price.replace(",", "."));
-    return sum + (isNaN(price) ? 0 : price * r.quantity);
-  }, 0);
 
   const productSuggestions = useMemo(() => {
     if (!query.trim()) return [];
@@ -144,7 +137,6 @@ export function ComprarClient({
           name: product.name,
           unit_label: product.unit_label,
           quantity: 1,
-          unit_price: "",
           expiration_date: suggestExpiration(product.default_shelf_life_days),
           replaceStock: false,
         },
@@ -223,16 +215,12 @@ export function ComprarClient({
       setStoreId(store.id);
     }
 
-    const items = rows.map((r) => {
-      const price = parseFloat(r.unit_price.replace(",", "."));
-      return {
-        product_id: r.product_id,
-        quantity: r.quantity,
-        unit_price: isNaN(price) ? null : price,
-        expiration_date: r.expiration_date || null,
-        replace_stock: r.replaceStock,
-      };
-    });
+    const items = rows.map((r) => ({
+      product_id: r.product_id,
+      quantity: r.quantity,
+      expiration_date: r.expiration_date || null,
+      replace_stock: r.replaceStock,
+    }));
 
     // El generador de tipos de Supabase no marca los params nullable de
     // las RPC como `| null` (ver Database["public"]["Functions"]), aunque
@@ -414,20 +402,11 @@ export function ComprarClient({
                   aria-label="Cantidad"
                 />
                 <span className="shrink-0 text-xs text-zinc-400">{row.unit_label}</span>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  placeholder="$ precio unit."
-                  value={row.unit_price}
-                  onChange={(e) => updateRow(row.key, { unit_price: e.target.value })}
-                  className="h-9 min-w-0 flex-1 rounded-lg border border-zinc-300 px-2 text-base dark:border-zinc-700 dark:bg-zinc-900"
-                  aria-label="Precio unitario"
-                />
                 <button
                   type="button"
                   onClick={() => removeRow(row.key)}
                   aria-label="Quitar"
-                  className="flex h-9 w-9 shrink-0 select-none items-center justify-center text-zinc-400 active:text-red-500"
+                  className="ml-auto flex h-9 w-9 shrink-0 select-none items-center justify-center text-zinc-400 active:text-red-500"
                 >
                   <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
                     <path d="M18 6 6 18M6 6l12 12" />
@@ -478,12 +457,6 @@ export function ComprarClient({
             </li>
           ))}
         </ul>
-      )}
-
-      {total > 0 && (
-        <p className="text-right text-sm text-zinc-600 dark:text-zinc-400">
-          Total estimado: <span className="font-semibold text-zinc-900 dark:text-zinc-50">${total.toFixed(2)}</span>
-        </p>
       )}
 
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
