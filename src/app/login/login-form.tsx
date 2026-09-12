@@ -48,7 +48,7 @@ export function LoginForm() {
       // (app)/layout.tsx), así que el botón se queda en "Un momento…" hasta
       // que la navegación reemplaza esta pantalla — evita que parpadee a su
       // estado normal y el usuario piense que el tap no hizo nada.
-      router.push(next || "/");
+      router.push(next || "/lista");
       router.refresh();
       return;
     }
@@ -62,7 +62,7 @@ export function LoginForm() {
 
     if (data.session) {
       // Confirmación por email deshabilitada: signUp ya deja al usuario logueado.
-      router.push(next || "/");
+      router.push(next || "/lista");
       router.refresh();
       return;
     }
