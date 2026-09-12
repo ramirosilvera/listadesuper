@@ -13,6 +13,7 @@ type Product = {
   default_shelf_life_days: number | null;
 };
 type Store = { id: string; name: string };
+type Category = { id: string; name: string; sort_order: number };
 
 type CheckedItem = {
   id: string;
@@ -54,12 +55,14 @@ export function ComprarClient({
   initialItems,
   allProducts,
   stores,
+  categories,
   suggestions: initialSuggestions,
 }: {
   householdId: string;
   initialItems: CheckedItem[];
   allProducts: Product[];
   stores: Store[];
+  categories: Category[];
   suggestions: Suggestion[];
 }) {
   const supabase = useMemo(() => createClient(), []);
@@ -85,6 +88,7 @@ export function ComprarClient({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
+  const [newProductCategoryId, setNewProductCategoryId] = useState("");
 
   const total = rows.reduce((sum, r) => {
     const price = parseFloat(r.unit_price.replace(",", "."));
@@ -100,6 +104,15 @@ export function ComprarClient({
       .slice(0, 6);
   }, [query, allProducts, rows]);
 
+  // Mismo criterio que en Lista: pedir categoría solo tiene sentido si el
+  // nombre no coincide con ningún producto existente -- si coincide,
+  // "+ Agregar" reusa el producto ya cargado (ver addNewProduct).
+  const looksLikeNewProduct = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return false;
+    return !allProducts.some((p) => p.name.toLowerCase() === q);
+  }, [query, allProducts]);
+
   const restockChips = useMemo(() => {
     const already = new Set(rows.map((r) => r.product_id));
     return suggestions.filter((s) => s.product_id && !already.has(s.product_id));
@@ -107,6 +120,7 @@ export function ComprarClient({
 
   function addRow(product: Product) {
     setQuery("");
+    setNewProductCategoryId("");
     setRows((prev) => {
       // El desplegable de sugerencias ya excluye productos que están en
       // `rows`, pero el submit de "+ Agregar X" (addNewProduct) no pasa
@@ -148,7 +162,11 @@ export function ComprarClient({
 
     const { data: product, error } = await supabase
       .from("products")
-      .insert({ household_id: householdId, name })
+      .insert({
+        household_id: householdId,
+        name,
+        category_id: newProductCategoryId || null,
+      })
       .select("id, name, unit_label, default_shelf_life_days")
       .single();
     if (error || !product) return;
@@ -264,6 +282,27 @@ export function ComprarClient({
                 {p.name}
               </button>
             ))}
+            {looksLikeNewProduct && categories.length > 0 && (
+              <div className="flex items-center gap-2 border-t border-zinc-200 px-3 py-2 dark:border-zinc-800">
+                <label htmlFor="new-product-category" className="shrink-0 text-xs text-zinc-500">
+                  Categoría
+                </label>
+                <select
+                  id="new-product-category"
+                  value={newProductCategoryId}
+                  onChange={(e) => setNewProductCategoryId(e.target.value)}
+                  onClick={(e) => e.stopPropagation()}
+                  className="h-8 min-w-0 flex-1 rounded-lg border border-zinc-300 bg-white px-2 text-xs text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+                >
+                  <option value="">Sin categoría (Otros)</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <button
               type="submit"
               className="block w-full border-t border-zinc-200 px-3 py-2 text-left text-sm font-medium text-[#16A34A] hover:bg-zinc-100 dark:border-zinc-800 dark:hover:bg-zinc-800"

@@ -53,6 +53,7 @@ export function ShoppingListClient({
   const [suggestions, setSuggestions] = useState(initialSuggestions);
   const [query, setQuery] = useState("");
   const [adding, setAdding] = useState(false);
+  const [newProductCategoryId, setNewProductCategoryId] = useState("");
   // "reconnecting" (no "connecting" inicial) a propósito: no queremos
   // mostrar nada en el arranque normal de la página, solo cuando el
   // canal YA estaba conectado y se cae -- eso es lo que de verdad importa
@@ -196,6 +197,16 @@ export function ShoppingListClient({
       .slice(0, 6);
   }, [query, products, items]);
 
+  // Solo tiene sentido pedir categoría cuando lo que se va a crear es un
+  // producto NUEVO -- si el nombre ya existe, "+ Agregar" en realidad
+  // reusa el producto existente (ver handleAddSubmit) y ya tiene su
+  // categoría de antes, elegir una acá no haría nada.
+  const looksLikeNewProduct = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return false;
+    return !products.some((p) => p.name.toLowerCase() === q);
+  }, [query, products]);
+
   async function toggleChecked(item: ListItem) {
     const next = !item.checked;
     setItems((prev) =>
@@ -236,6 +247,7 @@ export function ShoppingListClient({
 
   async function addExistingProduct(product: Product) {
     setQuery("");
+    setNewProductCategoryId("");
     const { data, error } = await supabase
       .from("shopping_list_items")
       .insert({
@@ -269,7 +281,11 @@ export function ShoppingListClient({
     setAdding(true);
     const { data: product, error } = await supabase
       .from("products")
-      .insert({ household_id: householdId, name })
+      .insert({
+        household_id: householdId,
+        name,
+        category_id: newProductCategoryId || null,
+      })
       .select("id, name, unit_label, category_id")
       .single();
     setAdding(false);
@@ -309,6 +325,27 @@ export function ShoppingListClient({
                 {p.name}
               </button>
             ))}
+            {looksLikeNewProduct && categories.length > 0 && (
+              <div className="flex items-center gap-2 border-t border-zinc-200 px-3 py-2 dark:border-zinc-800">
+                <label htmlFor="new-product-category" className="shrink-0 text-xs text-zinc-500">
+                  Categoría
+                </label>
+                <select
+                  id="new-product-category"
+                  value={newProductCategoryId}
+                  onChange={(e) => setNewProductCategoryId(e.target.value)}
+                  onClick={(e) => e.stopPropagation()}
+                  className="h-8 min-w-0 flex-1 rounded-lg border border-zinc-300 bg-white px-2 text-xs text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+                >
+                  <option value="">Sin categoría (Otros)</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <button
               type="submit"
               disabled={adding}

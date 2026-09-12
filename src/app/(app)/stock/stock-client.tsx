@@ -36,6 +36,7 @@ export function StockClient({
   const [editingSettingsId, setEditingSettingsId] = useState<string | null>(null);
   const [thresholdDraft, setThresholdDraft] = useState("");
   const [cycleDraft, setCycleDraft] = useState("");
+  const [categoryDraft, setCategoryDraft] = useState("");
   const [confirmArchiveId, setConfirmArchiveId] = useState<string | null>(null);
   const [archiving, setArchiving] = useState<string | null>(null);
   const [bannerDismissed, setBannerDismissed] = useState(true);
@@ -133,6 +134,7 @@ export function StockClient({
     setCycleDraft(
       product.restock_cycle_days !== null ? String(product.restock_cycle_days) : "",
     );
+    setCategoryDraft(product.category_id ?? "");
   }
 
   async function saveSettings(product: Product) {
@@ -143,11 +145,17 @@ export function StockClient({
         : null;
     const parsedCycle = cycleDraft.trim() === "" ? null : Number(cycleDraft);
     const cycle = parsedCycle !== null && !isNaN(parsedCycle) && parsedCycle > 0 ? parsedCycle : null;
+    const category = categoryDraft || null;
 
     setProducts((prev) =>
       prev.map((p) =>
         p.id === product.id
-          ? { ...p, low_stock_threshold: threshold, restock_cycle_days: cycle }
+          ? {
+              ...p,
+              low_stock_threshold: threshold,
+              restock_cycle_days: cycle,
+              category_id: category,
+            }
           : p,
       ),
     );
@@ -155,7 +163,11 @@ export function StockClient({
 
     await supabase
       .from("products")
-      .update({ low_stock_threshold: threshold, restock_cycle_days: cycle })
+      .update({
+        low_stock_threshold: threshold,
+        restock_cycle_days: cycle,
+        category_id: category,
+      })
       .eq("id", product.id);
   }
 
@@ -355,6 +367,21 @@ export function StockClient({
 
                 {isEditingSettings && (
                   <div className="flex flex-col gap-2 rounded-lg bg-zinc-50 p-2.5 pl-[1.375rem] dark:bg-zinc-900/60">
+                    <label className="flex items-center gap-2 text-xs text-zinc-500">
+                      Categoría
+                      <select
+                        value={categoryDraft}
+                        onChange={(e) => setCategoryDraft(e.target.value)}
+                        className="h-9 flex-1 rounded-lg border border-zinc-300 bg-white px-2 text-sm text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+                      >
+                        <option value="">Sin categoría (Otros)</option>
+                        {categories.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
                     <label className="flex items-center gap-2 text-xs text-zinc-500">
                       Avisar cuando queden
                       <input
