@@ -29,6 +29,8 @@ export function StockClient({
   const [query, setQuery] = useState("");
   const [editingThresholdId, setEditingThresholdId] = useState<string | null>(null);
   const [thresholdDraft, setThresholdDraft] = useState("");
+  const [confirmArchiveId, setConfirmArchiveId] = useState<string | null>(null);
+  const [archiving, setArchiving] = useState<string | null>(null);
 
   const categoryById = useMemo(() => {
     const map = new Map<string, Category>();
@@ -92,6 +94,22 @@ export function StockClient({
       .from("products")
       .update({ low_stock_threshold: value })
       .eq("id", product.id);
+  }
+
+  // Soft delete: products.archived (no un DELETE real) para no perder el
+  // historial de compras/gastos de ese producto en Reportes. Deja de
+  // aparecer en Stock, en las sugerencias de reposición y en Vencimientos.
+  async function archiveProduct(product: Product) {
+    setArchiving(product.id);
+    const { error } = await supabase
+      .from("products")
+      .update({ archived: true })
+      .eq("id", product.id);
+    setArchiving(null);
+    setConfirmArchiveId(null);
+    if (!error) {
+      setProducts((prev) => prev.filter((p) => p.id !== product.id));
+    }
   }
 
   return (
@@ -181,7 +199,42 @@ export function StockClient({
                       </span>
                     </button>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmArchiveId(p.id)}
+                    aria-label={`Quitar ${p.name} del catálogo`}
+                    className="flex h-9 w-9 shrink-0 select-none items-center justify-center text-zinc-400 active:text-red-500"
+                  >
+                    <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M3 6h18" />
+                      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                    </svg>
+                  </button>
                 </div>
+
+                {confirmArchiveId === p.id && (
+                  <div className="flex flex-wrap items-center gap-2 rounded-lg bg-red-50 px-2.5 py-2 text-xs text-red-800 dark:bg-red-950 dark:text-red-300">
+                    <span className="flex-1">
+                      ¿Quitar &quot;{p.name}&quot; del catálogo? No va a figurar más en Stock ni en sugeridos para reponer.
+                    </span>
+                    <button
+                      type="button"
+                      disabled={archiving === p.id}
+                      onClick={() => archiveProduct(p)}
+                      className="min-h-8 select-none touch-manipulation rounded-full bg-red-600 px-3 text-xs font-medium text-white active:bg-red-700 disabled:opacity-50"
+                    >
+                      {archiving === p.id ? "Quitando…" : "Sí, quitar"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmArchiveId(null)}
+                      className="min-h-8 select-none touch-manipulation rounded-full px-2 text-xs text-red-700 dark:text-red-300"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                )}
 
                 {isEditingThreshold && (
                   <div className="flex items-center gap-2 pl-[1.375rem]">

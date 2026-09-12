@@ -9,17 +9,26 @@ export default async function AjustesPage() {
   if (!household) redirect("/onboarding");
 
   const supabase = await createClient();
-  const { data: members } = await supabase
-    .from("household_members")
-    .select("user_id, role, joined_at")
-    .eq("household_id", household.id)
-    .order("joined_at", { ascending: true });
+  const [{ data: members }, { data: archivedProducts }] = await Promise.all([
+    supabase
+      .from("household_members")
+      .select("user_id, role, joined_at")
+      .eq("household_id", household.id)
+      .order("joined_at", { ascending: true }),
+    supabase
+      .from("products")
+      .select("id, name")
+      .eq("household_id", household.id)
+      .eq("archived", true)
+      .order("name", { ascending: true }),
+  ]);
 
   return (
     <AjustesClient
       household={household}
       userEmail={user.email ?? ""}
       memberCount={members?.length ?? 1}
+      archivedProducts={archivedProducts ?? []}
     />
   );
 }

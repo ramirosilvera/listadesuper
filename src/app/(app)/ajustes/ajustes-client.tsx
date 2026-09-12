@@ -6,14 +6,18 @@ import { createClient } from "@/lib/supabase/client";
 import { Button, Card } from "@/components/ui";
 import { importSeedCatalog } from "./import-seed-action";
 
+type ArchivedProduct = { id: string; name: string };
+
 export function AjustesClient({
   household,
   userEmail,
   memberCount,
+  archivedProducts: initialArchivedProducts,
 }: {
   household: { id: string; name: string; invite_code: string | null };
   userEmail: string;
   memberCount: number;
+  archivedProducts: ArchivedProduct[];
 }) {
   const router = useRouter();
   const [copied, setCopied] = useState(false);
@@ -21,6 +25,8 @@ export function AjustesClient({
   const [importMessage, setImportMessage] = useState<string | null>(null);
   const [seeding, startSeed] = useTransition();
   const [seedMessage, setSeedMessage] = useState<string | null>(null);
+  const [archivedProducts, setArchivedProducts] = useState(initialArchivedProducts);
+  const [restoringId, setRestoringId] = useState<string | null>(null);
 
   async function copyCode() {
     if (!household.invite_code) return;
@@ -51,6 +57,20 @@ export function AjustesClient({
       );
       router.refresh();
     });
+  }
+
+  async function restoreProduct(product: ArchivedProduct) {
+    setRestoringId(product.id);
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("products")
+      .update({ archived: false })
+      .eq("id", product.id);
+    setRestoringId(null);
+    if (!error) {
+      setArchivedProducts((prev) => prev.filter((p) => p.id !== product.id));
+      router.refresh();
+    }
   }
 
   async function logout() {
@@ -140,6 +160,35 @@ export function AjustesClient({
           <p className="mt-2 text-sm text-[#16A34A]">{seedMessage}</p>
         )}
       </Card>
+
+      {archivedProducts.length > 0 && (
+        <Card>
+          <p className="text-sm text-zinc-500">
+            Productos archivados ({archivedProducts.length})
+          </p>
+          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            Ya no aparecen en Stock, sugeridos para reponer ni Vencimientos.
+            Se pueden reactivar en cualquier momento.
+          </p>
+          <ul className="mt-3 divide-y divide-zinc-100 dark:divide-zinc-900">
+            {archivedProducts.map((p) => (
+              <li key={p.id} className="flex items-center gap-2 py-2">
+                <span className="flex-1 text-sm text-zinc-700 dark:text-zinc-300">
+                  {p.name}
+                </span>
+                <button
+                  type="button"
+                  disabled={restoringId === p.id}
+                  onClick={() => restoreProduct(p)}
+                  className="min-h-9 select-none touch-manipulation rounded-full bg-zinc-100 px-3 text-xs font-medium text-zinc-700 active:bg-zinc-200 disabled:opacity-50 dark:bg-zinc-800 dark:text-zinc-300 dark:active:bg-zinc-700"
+                >
+                  {restoringId === p.id ? "Restaurando…" : "Reactivar"}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
       <Card>
         <p className="text-sm text-zinc-500">Sesión iniciada como</p>

@@ -233,4 +233,18 @@ Se aplicó directamente en la base (`update products set low_stock_threshold = .
 
 **Decisión de alcance**: esto se hizo como una acción de datos puntual para este hogar, no se hardcodeó la composición familiar (2 adultos + bebé) dentro de `seed_initial_stock` ni de ningún otro código reusable — esos supuestos son específicos de esta casa y no deberían aplicarse automáticamente si el hogar cambia o si otro hogar usara la misma app. Los umbrales siguen siendo 100% editables por producto desde Stock, como ya lo eran antes de esta carga.
 
+---
+
+## Fase 7: archivar productos (a pedido del usuario)
+
+El usuario pidió poder sacar un producto de circulación (ejemplo real: "Pañales Pampers talle G", ya no lo necesita) sin que siga apareciendo en Stock ni en sugeridos para reponer.
+
+`products.archived` ya existía desde Fase 1 como soft delete pensado exactamente para esto (no se borra el producto para no perder el historial de compras/gastos en Reportes), pero no había ninguna forma de activarlo desde la UI. Se agregó:
+
+- **Stock**: botón para quitar un producto del catálogo, con confirmación inline (sin diálogos nativos del navegador, consistente con el resto de la app) antes de marcar `archived = true`.
+- **Ajustes**: sección "Productos archivados" (solo visible si hay alguno) con botón "Reactivar" por producto — soft delete reversible, no hay forma de perder el producto por error.
+- **Bug encontrado al revisar esto**: la vista `product_expirations_upcoming` no filtraba por `products.archived` (a diferencia de `product_replenishment`, que sí lo hacía desde Fase 4) — un producto archivado seguía apareciendo en la pestaña Vencimientos. Corregido en la misma migración (`fase7_archivar_productos`).
+
+Aplicado y verificado en el hogar real: "Pañales Pampers talle G" archivado, confirmado en `0` en `product_replenishment`, `product_expirations_upcoming` y el catálogo activo. `tsc --noEmit`, `npm run lint` y `npm run build` limpios.
+
 No se armó splash screen específico para iOS (`apple-touch-startup-image` por tamaño de dispositivo) — es papeleo de bajo impacto para un hogar de 2 personas; se puede sumar más adelante si se nota falta.
