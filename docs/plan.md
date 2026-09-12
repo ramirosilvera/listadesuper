@@ -695,6 +695,8 @@ Pedido del usuario: agregar filtro por categoría en Stock además del buscador,
 
 **Verificado**: `npm run build`/`npm run lint` limpios. Sin cambios de base de datos — los filtros son puramente de cliente sobre datos que ya se traían.
 
+**Ajuste posterior, mismo día**: el usuario probó los chips de categoría y le resultaron incómodos por el scroll lateral, y pidió evaluar alternativas ("mostrar todos los chips en pantalla, poner una hamburguesa, o lo que fuera"). Se evaluó `flex-wrap` (todos los chips visibles, sin scroll) contra un `<select>` nativo, con los nombres reales de las 12 categorías del hogar de por medio (varios largos: "Lácteos, huevos y fiambres", "Higiene y cuidado personal", "Insecticidas y repelentes") — envolver 14 chips (12 categorías + "Todas" + "Bajo stock") con esos nombres hubiera ocupado 4-5 líneas completas antes de llegar a un solo producto, demasiado alto para lo que en el fondo es elegir una sola opción de una lista. Se reemplazó por un `<select>` nativo (una sola línea, sin scroll lateral, y en el celular abre una hoja táctil grande y cómoda) más el toggle de "Bajo stock" al lado — y de paso reusa el mismo tipo de control que ya usan el editor de categoría de cada producto (Fase 21) y el alta de producto nuevo en Lista/Comprar, en vez de sumar un cuarto patrón de selección distinto. `npm run build`/`npm run lint` limpios.
+
 ---
 
 ## Fase 24: eliminar definitivamente productos archivados

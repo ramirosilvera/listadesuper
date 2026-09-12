@@ -277,41 +277,36 @@ export function StockClient({
       />
 
       {(categoryChips.length > 0 || lowStockOnly) && (
-        // Sin bleed a los bordes (-mx/px fijo): el padding real de <main>
-        // en el layout usa env(safe-area-inset-*), que en dispositivos con
-        // notch supera 1rem -- un margen negativo fijo hubiera dejado un
-        // hueco o un corte según el dispositivo. Se scrollea dentro del
-        // ancho normal del contenido, no borde a borde.
-        <div className="flex gap-1.5 overflow-x-auto pb-0.5">
-          <button
-            type="button"
-            onClick={() => setCategoryFilter("")}
-            className={`min-h-8 shrink-0 select-none touch-manipulation rounded-full px-3 text-xs font-medium ${
-              categoryFilter === ""
-                ? "bg-[#16A34A] text-white"
-                : "bg-zinc-100 text-zinc-600 active:bg-zinc-200 dark:bg-zinc-900 dark:text-zinc-400 dark:active:bg-zinc-800"
-            }`}
+        // Antes esto era una fila de chips con scroll horizontal -- con
+        // 12 categorías reales (algunas con nombres largos, ej. "Lácteos,
+        // huevos y fiambres") resultó incómodo de recorrer. Envolver los
+        // chips en varias líneas (flex-wrap) era la otra opción, pero con
+        // esa cantidad de categorías largas hubiera ocupado 4-5 líneas
+        // completas antes de llegar a un solo producto -- demasiado alto
+        // para lo que en realidad es "elegí una categoría". Un <select>
+        // nativo resuelve las dos cosas: una sola línea, sin scroll
+        // lateral, y en el celular abre una hoja/rueda táctil grande y
+        // cómoda (no un desplegable chico) -- además reusa el mismo tipo
+        // de control que ya usan el editor de categoría de cada producto
+        // y el alta de producto nuevo en Lista/Comprar, en vez de sumar
+        // un cuarto patrón de selección distinto a los ya existentes.
+        <div className="flex items-center gap-2">
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="h-10 min-w-0 flex-1 rounded-lg border border-zinc-300 bg-white px-2.5 text-sm text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
           >
-            Todas
-          </button>
-          {categoryChips.map((c) => (
-            <button
-              key={c.key}
-              type="button"
-              onClick={() => setCategoryFilter((prev) => (prev === c.key ? "" : c.key))}
-              className={`min-h-8 shrink-0 select-none touch-manipulation rounded-full px-3 text-xs font-medium ${
-                categoryFilter === c.key
-                  ? "bg-[#16A34A] text-white"
-                  : "bg-zinc-100 text-zinc-600 active:bg-zinc-200 dark:bg-zinc-900 dark:text-zinc-400 dark:active:bg-zinc-800"
-              }`}
-            >
-              {c.label} <span className="opacity-70">{c.count}</span>
-            </button>
-          ))}
+            <option value="">Todas las categorías</option>
+            {categoryChips.map((c) => (
+              <option key={c.key} value={c.key}>
+                {c.label} ({c.count})
+              </option>
+            ))}
+          </select>
           <button
             type="button"
             onClick={() => setLowStockOnly((v) => !v)}
-            className={`min-h-8 shrink-0 select-none touch-manipulation rounded-full border px-3 text-xs font-medium ${
+            className={`h-10 shrink-0 select-none touch-manipulation rounded-lg border px-3 text-sm font-medium ${
               lowStockOnly
                 ? "border-amber-600 bg-amber-500 text-white"
                 : "border-amber-200 bg-amber-50 text-amber-700 active:bg-amber-100 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300 dark:active:bg-amber-900"
