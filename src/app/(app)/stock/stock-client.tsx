@@ -66,16 +66,25 @@ export function StockClient({
   const [lowStockOnly, setLowStockOnly] = useState(false);
   const [editingSettingsId, setEditingSettingsId] = useState<string | null>(null);
   const [nameDraft, setNameDraft] = useState("");
+  const [unitDraft, setUnitDraft] = useState("");
   const [thresholdDraft, setThresholdDraft] = useState("");
   const [cycleDraft, setCycleDraft] = useState("");
   const [categoryDraft, setCategoryDraft] = useState("");
-  // Renombrar un producto reescribe cómo se ve TODA su compra pasada
-  // (nombre, no id, es lo que se muestra en Historial/Reportes) -- por
-  // eso, a diferencia de umbral/ciclo/categoría, un cambio de nombre no
-  // se guarda directo: pasa primero por esta confirmación explícita.
-  const [renameConfirm, setRenameConfirm] = useState<{ id: string; newName: string } | null>(
-    null,
-  );
+  // Nombre y unidad son los dos campos de este panel que no se guardan
+  // directo: un cambio de nombre reescribe cómo se ve TODA la compra
+  // pasada de este producto (Historial/Reportes muestran el nombre
+  // actual, no el que tenía en el momento de la compra), y un cambio de
+  // unidad puede volver ambiguas las cantidades YA cargadas (¿"2" sigue
+  // significando lo mismo si antes era "litros" y ahora es "medio
+  // litro"?) -- la app no tiene forma de saber si hace falta convertir
+  // los números existentes o no, solo la familia lo sabe.
+  const [confirmChange, setConfirmChange] = useState<{
+    id: string;
+    newName: string;
+    newUnit: string;
+    nameChanged: boolean;
+    unitChanged: boolean;
+  } | null>(null);
   const [renameError, setRenameError] = useState<string | null>(null);
   const [confirmArchiveId, setConfirmArchiveId] = useState<string | null>(null);
   const [archiving, setArchiving] = useState<string | null>(null);
@@ -201,6 +210,7 @@ export function StockClient({
   function startEditingSettings(product: Product) {
     setEditingSettingsId(product.id);
     setNameDraft(product.name);
+    setUnitDraft(product.unit_label);
     setThresholdDraft(
       product.low_stock_threshold !== null ? String(product.low_stock_threshold) : "",
     );
@@ -208,14 +218,14 @@ export function StockClient({
       product.restock_cycle_days !== null ? String(product.restock_cycle_days) : "",
     );
     setCategoryDraft(product.category_id ?? "");
-    setRenameConfirm(null);
+    setConfirmChange(null);
     setRenameError(null);
   }
 
-  // Guarda umbral/ciclo/categoría (y el nombre nuevo, si ya se confirmó un
-  // cambio de nombre o si no hubo ninguno). No hace ningún chequeo de
-  // nombre -- eso ya se resolvió antes de llamar a esta función.
-  async function commitSettings(product: Product, newName: string) {
+  // Guarda umbral/ciclo/categoría (y nombre/unidad nuevos, si ya se
+  // confirmó el cambio o si no hubo ninguno). No hace ningún chequeo de
+  // nombre/unidad -- eso ya se resolvió antes de llamar a esta función.
+  async function commitSettings(product: Product, newName: string, newUnit: string) {
     const parsedThreshold = thresholdDraft.trim() === "" ? null : Number(thresholdDraft);
     const threshold =
       parsedThreshold !== null && !isNaN(parsedThreshold) && parsedThreshold >= 0
@@ -231,6 +241,7 @@ export function StockClient({
           ? {
               ...p,
               name: newName,
+              unit_label: newUnit,
               low_stock_threshold: threshold,
               restock_cycle_days: cycle,
               category_id: category,
@@ -239,12 +250,13 @@ export function StockClient({
       ),
     );
     setEditingSettingsId(null);
-    setRenameConfirm(null);
+    setConfirmChange(null);
 
     await supabase
       .from("products")
       .update({
         name: newName,
+        unit_label: newUnit,
         low_stock_threshold: threshold,
         restock_cycle_days: cycle,
         category_id: category,
@@ -254,31 +266,36 @@ export function StockClient({
 
   function saveSettings(product: Product) {
     setRenameError(null);
-    const trimmedName = nameDraft.trim();
+    const trimmedName = nameDraft.trim() || product.name;
+    const trimmedUnit = unitDraft.trim() || product.unit_label;
+    const nameChanged = trimmedName !== product.name;
+    const unitChanged = trimmedUnit !== product.unit_label;
 
-    if (!trimmedName || trimmedName === product.name) {
-      commitSettings(product, product.name);
-      return;
-    }
-
-    // El nombre es lo único de este panel que también reescribe cómo se
-    // ve el historial pasado (Historial/Reportes muestran el nombre
-    // actual del producto, no el que tenía en el momento de la compra).
-    // Antes de tocarlo: si el nombre nuevo ya es el de OTRO producto
-    // existente, es casi seguro un error (se quiso buscar ese producto,
-    // no renombrar este) -- se bloquea en vez de dejar dos productos con
-    // el mismo nombre, misma regla que ya usan Lista y Comprar al crear.
-    const duplicate = products.find(
-      (p) => p.id !== product.id && p.name.toLowerCase() === trimmedName.toLowerCase(),
-    );
-    if (duplicate) {
-      setRenameError(
-        `Ya existe un producto llamado "${duplicate.name}". Para no duplicarlo, buscalo en Lista o Comprar en vez de renombrar este.`,
+    if (nameChanged) {
+      // El nombre reescribe cómo se ve el historial pasado (Historial/
+      // Reportes muestran el nombre actual del producto, no el que tenía
+      // en el momento de la compra). Antes de tocarlo: si el nombre nuevo
+      // ya es el de OTRO producto existente, es casi seguro un error (se
+      // quiso buscar ese producto, no renombrar este) -- se bloquea en
+      // vez de dejar dos productos con el mismo nombre, misma regla que
+      // ya usan Lista y Comprar al crear.
+      const duplicate = products.find(
+        (p) => p.id !== product.id && p.name.toLowerCase() === trimmedName.toLowerCase(),
       );
+      if (duplicate) {
+        setRenameError(
+          `Ya existe un producto llamado "${duplicate.name}". Para no duplicarlo, buscalo en Lista o Comprar en vez de renombrar este.`,
+        );
+        return;
+      }
+    }
+
+    if (nameChanged || unitChanged) {
+      setConfirmChange({ id: product.id, newName: trimmedName, newUnit: trimmedUnit, nameChanged, unitChanged });
       return;
     }
 
-    setRenameConfirm({ id: product.id, newName: trimmedName });
+    commitSettings(product, product.name, product.unit_label);
   }
 
   // Toggle de un solo toque, sin confirmación: a diferencia de renombrar
@@ -593,7 +610,7 @@ export function StockClient({
                         onChange={(e) => {
                           setNameDraft(e.target.value);
                           setRenameError(null);
-                          setRenameConfirm(null);
+                          setConfirmChange(null);
                         }}
                         className="h-9 min-w-0 flex-1 rounded-lg border border-zinc-300 px-2 text-base dark:border-zinc-700 dark:bg-zinc-900"
                       />
@@ -601,6 +618,19 @@ export function StockClient({
                     {renameError && (
                       <p className="text-xs text-red-600 dark:text-red-400">{renameError}</p>
                     )}
+                    <label className="flex items-center gap-2 text-xs text-zinc-500">
+                      Unidad
+                      <input
+                        type="text"
+                        value={unitDraft}
+                        onChange={(e) => {
+                          setUnitDraft(e.target.value);
+                          setConfirmChange(null);
+                        }}
+                        placeholder="ej. medio litro, kg, unidad"
+                        className="h-9 w-32 rounded-lg border border-zinc-300 px-2 text-base dark:border-zinc-700 dark:bg-zinc-900"
+                      />
+                    </label>
                     <label className="flex items-center gap-2 text-xs text-zinc-500">
                       Categoría
                       <select
@@ -641,24 +671,37 @@ export function StockClient({
                       />
                       días
                     </label>
-                    {renameConfirm?.id === p.id ? (
+                    {confirmChange?.id === p.id ? (
                       <div className="flex flex-col gap-2 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300">
                         <span>
-                          ¿Cambiar el nombre a &quot;{renameConfirm.newName}&quot;? Así se va a
-                          ver también en toda la compra pasada de este producto. Si en realidad
-                          es un producto distinto, cancelá y agregalo aparte en Lista o Comprar.
+                          ¿Cambiar{" "}
+                          {[
+                            confirmChange.nameChanged
+                              ? `el nombre a "${confirmChange.newName}"`
+                              : null,
+                            confirmChange.unitChanged
+                              ? `la unidad a "${confirmChange.newUnit}"`
+                              : null,
+                          ]
+                            .filter(Boolean)
+                            .join(" y ")}
+                          ?{" "}
+                          {confirmChange.nameChanged &&
+                            "Así se va a ver también en toda la compra pasada de este producto. Si en realidad es un producto distinto, cancelá y agregalo aparte en Lista o Comprar. "}
+                          {confirmChange.unitChanged &&
+                            "La unidad es solo una etiqueta -- no convierte las cantidades ya cargadas. Si antes contabas distinto (por ejemplo, en litros) y la unidad nueva representa otra cantidad física, ajustá vos los números para que sigan significando lo mismo."}
                         </span>
                         <div className="flex gap-2">
                           <button
                             type="button"
-                            onClick={() => commitSettings(p, renameConfirm.newName)}
+                            onClick={() => commitSettings(p, confirmChange.newName, confirmChange.newUnit)}
                             className="min-h-8 select-none touch-manipulation rounded-full bg-amber-600 px-3 text-xs font-medium text-white active:bg-amber-700"
                           >
                             Sí, cambiar
                           </button>
                           <button
                             type="button"
-                            onClick={() => setRenameConfirm(null)}
+                            onClick={() => setConfirmChange(null)}
                             className="min-h-8 select-none touch-manipulation rounded-full px-2 text-xs text-amber-700 dark:text-amber-300"
                           >
                             Cancelar
@@ -678,7 +721,7 @@ export function StockClient({
                           type="button"
                           onClick={() => {
                             setEditingSettingsId(null);
-                            setRenameConfirm(null);
+                            setConfirmChange(null);
                             setRenameError(null);
                           }}
                           className="min-h-9 select-none touch-manipulation rounded-full px-2 text-xs text-zinc-500"

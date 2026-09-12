@@ -777,6 +777,20 @@ Pedido del usuario: que al cumplirse el ciclo de compra de un producto, además 
 
 ---
 
+## Editar la unidad de cada producto ("aceite de oliva no es por litro, es por medio litro")
+
+Pedido del usuario, retomado tras una interrupción de contexto en la sesión (confirmado con `ListAgents` que no había ningún agente en curso realmente pendiente — "agentes pendientes" se refería a este trabajo, no a procesos en background). Roles: integridad de datos (qué pasa con las cantidades ya cargadas al cambiar la unidad) y UX de confianza (misma línea de la Fase 22, renombrar productos).
+
+**Investigación antes de decidir el mecanismo**: se confirmó sobre el hogar real que "Aceite de oliva genérico" y "Aceite de oliva premium" tienen `unit_label = "L"` y `quantity_on_hand = 1` cada uno, sin ninguna compra real registrada (`purchase_items` vacío) ni fila en `product_expirations` — los únicos movimientos son la carga inicial de la Fase 6 y un ajuste manual reciente del propio usuario probando la UI. **HECHO**: no hay ningún número histórico cuyo significado dependa de si la unidad dice "L" o "medio litro" — el "1" siempre contó "1 botella", nunca litros reales. Este caso puntual es entonces una corrección de etiqueta pura, del mismo tipo que corregir un nombre mal escrito (Fase 22), **no** del tipo Huevos (Fase, "Unidad de Huevos"): ahí "1 docena" pasó a valer "2 packs de 6" porque el factor de conversión SÍ cambiaba cuántas unidades físicas representaba cada número, y hubo que recalcular a mano cada cantidad ya cargada.
+
+**El problema real es que el mecanismo pedido tiene que servir para AMBOS casos**, no solo para este: la app no tiene (por diseño, desde la Fase 1) una tabla de factores de conversión entre unidades, así que no puede saber automáticamente si un cambio de unidad necesita convertir números o no — eso solo lo sabe la familia. Igual que con renombrar (Fase 22), la solución no es bloquear ni forzar una conversión automática que podría estar mal, sino habilitar la edición completa con una advertencia clara en el momento exacto en que se puede tomar la decisión informada.
+
+**Qué se construyó**: campo "Unidad" agregado al panel de ajustes de cada producto en Stock (mismo panel de nombre/categoría/umbral/ciclo). La confirmación de nombre de la Fase 22 se generalizó para cubrir también la unidad: si se cambia el nombre, la unidad, o ambos a la vez, aparece un único cuadro de confirmación ámbar que arma su texto según lo que efectivamente cambió — para la unidad, aclara explícitamente que es "solo una etiqueta, no convierte las cantidades ya cargadas" y que si la unidad nueva representa una cantidad física distinta, hay que ajustar los números a mano. La unidad no tiene el chequeo de duplicados que sí tiene el nombre (no hay un concepto de "unidad ya existente" que tenga sentido bloquear).
+
+**Verificado**: `update products set unit_label = ...` probado con RLS real (`set local role authenticated` + JWT del usuario real) en una transacción con `rollback` sobre "Aceite de oliva genérico" — funcionó sin necesidad de ninguna migración, porque `unit_label` ya era una columna editable bajo la misma policy genérica de la Fase 24 (sin restricción adicional más allá de pertenencia al hogar). `npm run build`/`npm run lint` limpios.
+
+---
+
 ## Fase 24: eliminar definitivamente productos archivados
 
 Pedido del usuario, con motivo concreto: hay productos del import inicial (Fase 1) archivados por ser duplicados, ambiguos o incompletos, y "no tiene sentido archivarlos para siempre". Roles: integridad de datos (qué se pierde realmente al borrar) y seguridad/RLS (dónde debe vivir la restricción).
