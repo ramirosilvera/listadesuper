@@ -411,21 +411,19 @@ export function ShoppingListClient({
                 </button>
 
                 <span
-                  className={`flex-1 py-2.5 text-sm ${item.checked ? "text-zinc-400 line-through" : "text-zinc-900 dark:text-zinc-50"}`}
+                  className={`min-w-0 flex-1 truncate py-2.5 text-sm ${item.checked ? "text-zinc-400 line-through" : "text-zinc-900 dark:text-zinc-50"}`}
                 >
                   {item.products?.name ?? "Producto"}
                 </span>
 
-                <div className="flex items-center text-sm text-zinc-600 dark:text-zinc-400">
+                <div className="flex shrink-0 items-center gap-1 text-sm text-zinc-600 dark:text-zinc-400">
                   <button
                     type="button"
                     onClick={() => changeQuantity(item, -1)}
-                    className="flex h-9 w-9 shrink-0 select-none items-center justify-center rounded-full active:bg-zinc-200 dark:active:bg-zinc-700"
+                    className="flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-full bg-zinc-100 active:bg-zinc-200 dark:bg-zinc-800 dark:active:bg-zinc-700"
                     aria-label="Restar"
                   >
-                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
-                      −
-                    </span>
+                    −
                   </button>
                   <span className="w-8 text-center tabular-nums">
                     {item.quantity}
@@ -436,12 +434,10 @@ export function ShoppingListClient({
                   <button
                     type="button"
                     onClick={() => changeQuantity(item, 1)}
-                    className="flex h-9 w-9 shrink-0 select-none items-center justify-center rounded-full active:bg-zinc-200 dark:active:bg-zinc-700"
+                    className="flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-full bg-zinc-100 active:bg-zinc-200 dark:bg-zinc-800 dark:active:bg-zinc-700"
                     aria-label="Sumar"
                   >
-                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
-                      +
-                    </span>
+                    +
                   </button>
                 </div>
 

@@ -409,12 +409,29 @@ export function StockClient({
               ]
                 .filter(Boolean)
                 .join(" · ");
+              // Antes esto vivía junto al nombre en una sola fila con la
+              // cantidad y los 3 botones de acción -- 5 elementos de ancho
+              // fijo (~250px) le dejaban al nombre menos de 60px reales en
+              // un celular angosto, y el texto terminaba partido letra por
+              // letra ("Aceite" / "de" / "girasol" en líneas separadas,
+              // reportado por el usuario con una captura). Ahora el nombre
+              // tiene su propia fila a ancho completo (con truncate como
+              // resguardo, no como recurso principal: ningún nombre real
+              // del catálogo se acerca a ese límite) y los controles bajan
+              // a una fila propia.
+              const statusText = p.needs_restock
+                ? "Marcado para reponer"
+                : p.last_restocked_at
+                  ? `Última compra: ${LAST_RESTOCK_FMT.format(new Date(p.last_restocked_at))}`
+                  : p.quantity_on_hand > 0
+                    ? "Cantidad inicial (estimado)"
+                    : null;
               return (
                 <li
                   key={p.id}
-                  className="flex flex-col gap-1.5 border-b border-zinc-100 bg-white px-3 py-2.5 last:border-b-0 dark:border-zinc-900 dark:bg-zinc-950"
+                  className="flex flex-col gap-1 border-b border-zinc-100 bg-white px-3 py-2.5 last:border-b-0 dark:border-zinc-900 dark:bg-zinc-950"
                 >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                   <span
                     className={`h-2.5 w-2.5 shrink-0 rounded-full ${
                       level === "empty"
@@ -425,115 +442,112 @@ export function StockClient({
                     }`}
                     aria-hidden
                   />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm text-zinc-900 dark:text-zinc-50">{p.name}</p>
-                    {p.last_restocked_at ? (
-                      <p className="text-xs text-zinc-400">
-                        Última compra: {LAST_RESTOCK_FMT.format(new Date(p.last_restocked_at))}
-                      </p>
-                    ) : (
-                      p.quantity_on_hand > 0 && (
-                        // Este número vino de la carga inicial (seed_initial_stock,
-                        // Fase 6), no de una compra registrada todavía. Sin esta
-                        // aclaración se ve idéntico a un dato real y, si está mal,
-                        // parece un error de la app en vez de un punto de partida
-                        // editable -- tocar +/- ya lo corrige.
-                        <p className="text-xs text-zinc-400">
-                          Cantidad inicial, sin compra registrada todavía
-                        </p>
-                      )
+                  <p className="min-w-0 flex-1 truncate text-sm text-zinc-900 dark:text-zinc-50">
+                    {p.name}
+                  </p>
+                </div>
+
+                {(statusText || settingsSummary) && (
+                  <div className="flex flex-wrap items-center gap-x-1.5 pl-[1.125rem] text-xs">
+                    {statusText && (
+                      <span
+                        className={
+                          p.needs_restock
+                            ? "font-medium text-amber-600 dark:text-amber-400"
+                            : "text-zinc-400"
+                        }
+                      >
+                        {statusText}
+                      </span>
                     )}
-                    {p.needs_restock && (
-                      <p className="text-xs font-medium text-amber-600 dark:text-amber-400">
-                        Marcado para reponer
-                      </p>
+                    {statusText && settingsSummary && !isEditingSettings && (
+                      <span className="text-zinc-300 dark:text-zinc-700">·</span>
                     )}
                     {!isEditingSettings && settingsSummary && (
                       <button
                         type="button"
                         onClick={() => startEditingSettings(p)}
-                        className="text-xs text-zinc-400 underline decoration-dotted active:text-zinc-600 dark:active:text-zinc-300"
+                        className="text-zinc-400 underline decoration-dotted active:text-zinc-600 dark:active:text-zinc-300"
                       >
                         {settingsSummary}
                       </button>
                     )}
                   </div>
-                  <div className="flex items-center text-sm text-zinc-600 dark:text-zinc-400">
+                )}
+
+                <div className="flex items-center justify-between gap-2 pl-[1.125rem]">
+                  <div className="flex items-center gap-1.5 text-sm text-zinc-600 dark:text-zinc-400">
                     <button
                       type="button"
                       onClick={() => adjust(p, -1)}
-                      className="flex h-9 w-9 shrink-0 select-none items-center justify-center rounded-full active:bg-zinc-200 dark:active:bg-zinc-700"
+                      className="flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-full bg-zinc-100 active:bg-zinc-200 dark:bg-zinc-800 dark:active:bg-zinc-700"
                       aria-label="Restar"
                     >
-                      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
-                        −
-                      </span>
+                      −
                     </button>
-                    <span className="w-10 text-center tabular-nums">
+                    <span className="w-9 text-center tabular-nums">
                       {p.quantity_on_hand}
-                      <span className="ml-0.5 text-xs text-zinc-400">
-                        {p.unit_label}
-                      </span>
+                      <span className="ml-0.5 text-xs text-zinc-400">{p.unit_label}</span>
                     </span>
                     <button
                       type="button"
                       onClick={() => adjust(p, 1)}
-                      className="flex h-9 w-9 shrink-0 select-none items-center justify-center rounded-full active:bg-zinc-200 dark:active:bg-zinc-700"
+                      className="flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-full bg-zinc-100 active:bg-zinc-200 dark:bg-zinc-800 dark:active:bg-zinc-700"
                       aria-label="Sumar"
                     >
-                      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
-                        +
-                      </span>
+                      +
                     </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => toggleNeedsRestock(p)}
-                    aria-label={
-                      p.needs_restock
-                        ? `Ya no marcar "${p.name}" para reponer`
-                        : `Marcar "${p.name}" para reponer (abierto, queda poco)`
-                    }
-                    aria-pressed={p.needs_restock}
-                    className="flex h-9 w-9 shrink-0 select-none items-center justify-center"
-                  >
-                    {p.needs_restock ? (
-                      <span className="flex h-6 w-6 items-center justify-center rounded-md bg-amber-500 text-white">
-                        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M20 6 9 17l-5-5" />
-                        </svg>
-                      </span>
-                    ) : (
-                      <span className="h-6 w-6 rounded-md border-2 border-zinc-300 dark:border-zinc-700" />
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      isEditingSettings ? setEditingSettingsId(null) : startEditingSettings(p)
-                    }
-                    aria-label={`Configurar avisos de ${p.name}`}
-                    className={`flex h-9 w-9 shrink-0 select-none items-center justify-center ${
-                      isEditingSettings ? "text-[#16A34A]" : "text-zinc-400 active:text-zinc-600 dark:active:text-zinc-300"
-                    }`}
-                  >
-                    <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="12" r="3" />
-                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" />
-                    </svg>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setConfirmArchiveId(p.id)}
-                    aria-label={`Quitar ${p.name} del catálogo`}
-                    className="flex h-9 w-9 shrink-0 select-none items-center justify-center text-zinc-400 active:text-red-500"
-                  >
-                    <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M3 6h18" />
-                      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                    </svg>
-                  </button>
+                  <div className="flex items-center">
+                    <button
+                      type="button"
+                      onClick={() => toggleNeedsRestock(p)}
+                      aria-label={
+                        p.needs_restock
+                          ? `Ya no marcar "${p.name}" para reponer`
+                          : `Marcar "${p.name}" para reponer (abierto, queda poco)`
+                      }
+                      aria-pressed={p.needs_restock}
+                      className="flex h-9 w-9 shrink-0 select-none items-center justify-center"
+                    >
+                      {p.needs_restock ? (
+                        <span className="flex h-5.5 w-5.5 items-center justify-center rounded-md bg-amber-500 text-white">
+                          <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M20 6 9 17l-5-5" />
+                          </svg>
+                        </span>
+                      ) : (
+                        <span className="h-5.5 w-5.5 rounded-md border-2 border-zinc-300 dark:border-zinc-700" />
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        isEditingSettings ? setEditingSettingsId(null) : startEditingSettings(p)
+                      }
+                      aria-label={`Configurar avisos de ${p.name}`}
+                      className={`flex h-9 w-9 shrink-0 select-none items-center justify-center ${
+                        isEditingSettings ? "text-[#16A34A]" : "text-zinc-400 active:text-zinc-600 dark:active:text-zinc-300"
+                      }`}
+                    >
+                      <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="3" />
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmArchiveId(p.id)}
+                      aria-label={`Quitar ${p.name} del catálogo`}
+                      className="flex h-9 w-9 shrink-0 select-none items-center justify-center text-zinc-400 active:text-red-500"
+                    >
+                      <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 6h18" />
+                        <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
 
                 {confirmArchiveId === p.id && (

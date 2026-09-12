@@ -749,6 +749,20 @@ Pedido del usuario, con un caso concreto: hay productos de los que a propósito 
 
 ---
 
+## Filas de producto en Stock, Lista y Comprar: arreglo de texto colapsado
+
+El usuario adjuntó una captura real de Stock mostrando el bug: el nombre "Aceite de girasol" partido en 3 líneas, una palabra por línea ("Aceite" / "de" / "girasol"), y el texto de estado ("Cantidad inicial, sin compra registrada todavía") envuelto en 6 líneas — cada fila de producto ocupaba una pantalla entera. Pidió mejorar Lista, Comprar y Stock para que se vean "más resumidas, más limpias, sin colapsar". Roles: UI/layout (causa raíz del colapso) y consistencia visual entre las 3 pantallas.
+
+**Causa raíz diagnosticada en Stock antes de tocar nada** (no un ajuste de prueba y error): la fila tenía el nombre y 5 elementos de ancho fijo —stepper de cantidad (~140px) más 3 botones de ícono (~108px)— compitiendo en una sola fila flex. En un celular de ~390px de ancho, esos elementos fijos + separadores absorbían más de 300px, dejando al bloque del nombre (un `<div className="flex-1">` sin `truncate`) menos de 60px reales — de ahí que el texto se partiera letra por letra en vez de solo saltar de línea. El mismo patrón (contenido de ancho variable compitiendo con controles de ancho fijo en una sola fila, sin `min-w-0`/`truncate`) estaba también en Lista (más leve, checkbox + stepper + botón quitar) y en Comprar (agravado por `flex-wrap` sin punto de corte predecible: nombre + input de cantidad + input de precio + botón quitar superaban el ancho disponible y la fila se partía en un lugar distinto según el largo del nombre de cada producto).
+
+**Arreglo aplicado, mismo criterio en las 3 pantallas**: el nombre del producto pasa a tener su propia fila a ancho completo (con `truncate` como resguardo, no como recurso principal — se verificó contra el nombre real más largo del catálogo, "Aceite de oliva premium (marca Zuelo)", ~38 caracteres, que entra cómodo en una sola línea en el ancho disponible real calculado). Los controles (stepper de cantidad, checkbox de "marcar para reponer", ajustes, archivar/quitar en Stock; checkbox + stepper + quitar en Lista; cantidad + precio + quitar en Comprar) bajan a su propia fila, compacta y sin competir por espacio con el texto.
+
+**Además, en Stock específicamente** (el caso más recargado, con 3 textos de estado que podían apilarse en hasta 3 líneas separadas — última compra/cantidad inicial, marcado para reponer, resumen de umbral/ciclo): se consolidaron en una sola línea con `flex-wrap` (no 3 párrafos apilados), separados por "·" cuando hay más de uno. Se acortó también el texto "Cantidad inicial, sin compra registrada todavía" a "Cantidad inicial (estimado)" — la explicación completa ya vive en el banner de la Fase 20 que se muestra una vez arriba de la lista, repetirla en cada fila era la clase de redundancia que hacía ver la pantalla más pesada de lo necesario. Se sacó también el patrón de "círculo dentro de círculo" en los botones +/- de las 3 pantallas (un `<button>` transparente envolviendo un `<span>` con el color real) a favor de un solo botón con su propio fondo — menos nodos, mismo tamaño de toque, más prolijo.
+
+**Limitación declarada**: no se pudo verificar visualmente en un navegador real dentro de este entorno (requeriría autenticarse contra el Supabase de producción del hogar real, algo que se evitó deliberadamente durante toda la sesión). La verificación se apoyó en medir el ancho real disponible contra el nombre de producto más largo del catálogo real (ya consultado por SQL en rondas anteriores) en vez de una suposición, más `npm run build`/`npm run lint` limpios.
+
+---
+
 ## Fase 24: eliminar definitivamente productos archivados
 
 Pedido del usuario, con motivo concreto: hay productos del import inicial (Fase 1) archivados por ser duplicados, ambiguos o incompletos, y "no tiene sentido archivarlos para siempre". Roles: integridad de datos (qué se pierde realmente al borrar) y seguridad/RLS (dónde debe vivir la restricción).

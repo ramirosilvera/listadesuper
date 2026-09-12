@@ -377,10 +377,15 @@ export function ComprarClient({
               key={row.key}
               className="flex flex-col gap-1.5 border-b border-zinc-100 bg-white px-3 py-2.5 last:border-b-0 dark:border-zinc-900 dark:bg-zinc-950"
             >
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="min-w-[7rem] flex-1 text-sm text-zinc-900 dark:text-zinc-50">
-                  {row.name}
-                </span>
+              {/* Antes nombre + 2 inputs + botón vivían en una sola fila
+                  (min-w-[7rem] + 64px + 112px + 44px + separadores superaba
+                  el ancho disponible en un celular angosto), y flex-wrap
+                  la partía en un punto impredecible según el largo del
+                  nombre. El nombre ahora tiene su propia fila a ancho
+                  completo (truncate como resguardo) y los controles bajan
+                  compactos a la fila de abajo. */}
+              <p className="truncate text-sm text-zinc-900 dark:text-zinc-50">{row.name}</p>
+              <div className="flex items-center gap-1.5">
                 <input
                   type="number"
                   min={1}
@@ -394,26 +399,26 @@ export function ComprarClient({
                   }
                   // text-base (16px), no text-sm: un input mas chico hace
                   // que iOS Safari haga auto-zoom al tocarlo.
-                  className="h-11 w-16 rounded-lg border border-zinc-300 px-2 text-center text-base dark:border-zinc-700 dark:bg-zinc-900"
+                  className="h-9 w-14 shrink-0 rounded-lg border border-zinc-300 px-1 text-center text-base dark:border-zinc-700 dark:bg-zinc-900"
                   aria-label="Cantidad"
                 />
-                <span className="text-xs text-zinc-400">{row.unit_label}</span>
+                <span className="shrink-0 text-xs text-zinc-400">{row.unit_label}</span>
                 <input
                   type="text"
                   inputMode="decimal"
                   placeholder="$ precio unit."
                   value={row.unit_price}
                   onChange={(e) => updateRow(row.key, { unit_price: e.target.value })}
-                  className="h-11 w-28 rounded-lg border border-zinc-300 px-2 text-base dark:border-zinc-700 dark:bg-zinc-900"
+                  className="h-9 min-w-0 flex-1 rounded-lg border border-zinc-300 px-2 text-base dark:border-zinc-700 dark:bg-zinc-900"
                   aria-label="Precio unitario"
                 />
                 <button
                   type="button"
                   onClick={() => removeRow(row.key)}
                   aria-label="Quitar"
-                  className="flex h-11 w-11 shrink-0 select-none items-center justify-center text-zinc-400 active:text-red-500"
+                  className="flex h-9 w-9 shrink-0 select-none items-center justify-center text-zinc-400 active:text-red-500"
                 >
-                  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                  <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
                     <path d="M18 6 6 18M6 6l12 12" />
                   </svg>
                 </button>
