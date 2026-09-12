@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getActiveHousehold } from "@/lib/household";
 import { NavBar } from "./nav-bar";
+import { InstallPrompt } from "./install-prompt";
 
 export default async function AppLayout({
   children,
@@ -57,6 +58,7 @@ export default async function AppLayout({
           paddingRight: "max(1rem, env(safe-area-inset-right))",
         }}
       >
+        <InstallPrompt />
         {children}
       </main>
 
