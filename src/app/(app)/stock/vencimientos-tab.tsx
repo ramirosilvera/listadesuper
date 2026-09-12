@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { Button, SegmentedControl } from "@/components/ui";
 
 const BANNER_DISMISS_KEY = "listasuper:vencimientos-estimado-banner-dismissed";
 
@@ -38,7 +39,7 @@ const LEVEL_STYLES: Record<
     label: (days) => `Vence en ${days} días`,
   },
   green: {
-    dot: "bg-[#16A34A]",
+    dot: "bg-brand-600",
     badge: "bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-400",
     label: (days) => `Vence en ${days} días`,
   },
@@ -175,22 +176,15 @@ export function VencimientosTab({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex gap-1 self-start rounded-full bg-zinc-100 p-1 text-sm font-medium dark:bg-zinc-900">
-        <button
-          type="button"
-          onClick={() => setTimeFilter("soon")}
-          className={`select-none touch-manipulation rounded-full px-3 py-1.5 transition-colors ${timeFilter === "soon" ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50" : "text-zinc-500"}`}
-        >
-          Próximos {soonCount > 0 ? `(${soonCount})` : ""}
-        </button>
-        <button
-          type="button"
-          onClick={() => setTimeFilter("all")}
-          className={`select-none touch-manipulation rounded-full px-3 py-1.5 transition-colors ${timeFilter === "all" ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50" : "text-zinc-500"}`}
-        >
-          Todos ({expirations.length})
-        </button>
-      </div>
+      <SegmentedControl
+        className="self-start"
+        value={timeFilter}
+        onChange={setTimeFilter}
+        options={[
+          { value: "soon", label: `Próximos ${soonCount > 0 ? `(${soonCount})` : ""}` },
+          { value: "all", label: `Todos (${expirations.length})` },
+        ]}
+      />
 
       {timeFilter === "soon" && visibleExpirations.length === 0 && (
         <p className="rounded-xl bg-zinc-50 py-8 text-center text-sm text-zinc-500 dark:bg-zinc-900/60">
@@ -225,7 +219,7 @@ export function VencimientosTab({
         </div>
       )}
       {visibleExpirations.length > 0 && (
-      <ul className="overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-800">
+      <ul className="shadow-soft overflow-hidden rounded-xl border border-zinc-200/70 dark:border-zinc-800">
       {visibleExpirations.map((exp) => {
         const style = LEVEL_STYLES[exp.level ?? "green"] ?? LEVEL_STYLES.green;
         const confirming = confirmDiscardId === exp.id;
@@ -298,14 +292,14 @@ export function VencimientosTab({
                 <span className="flex-1">
                   ¿Tirar &quot;{exp.product_name}&quot;? Descuenta el stock real, no se puede deshacer.
                 </span>
-                <button
-                  type="button"
+                <Button
+                  variant="danger"
+                  size="sm"
                   disabled={busyId === exp.id}
                   onClick={() => resolve(exp.id, "discarded")}
-                  className="min-h-8 select-none touch-manipulation rounded-full bg-red-600 px-3 text-xs font-medium text-white active:bg-red-700 disabled:opacity-50"
                 >
                   {busyId === exp.id ? "Un momento…" : "Sí, lo tiré"}
-                </button>
+                </Button>
                 <button
                   type="button"
                   onClick={() => setConfirmDiscardId(null)}

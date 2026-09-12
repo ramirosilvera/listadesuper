@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
+import { Button } from "@/components/ui";
 
 // Boundary de errores a nivel raíz (Fase 18, auditoría pre-publicación):
 // no existía ninguno en toda la app. Sin esto, cualquier excepción no
@@ -64,18 +65,13 @@ export default function GlobalErrorBoundary({
       </div>
 
       <div className="flex w-full max-w-xs flex-col gap-2">
-        <button
-          type="button"
-          onClick={() => retry()}
-          className="inline-flex min-h-11 touch-manipulation items-center justify-center rounded-full bg-[#16A34A] px-5 text-sm font-medium text-white select-none active:bg-[#15803D]"
-        >
+        <Button onClick={() => retry()} className="w-full">
           Reintentar
-        </button>
-        <Link
-          href="/"
-          className="inline-flex min-h-11 touch-manipulation items-center justify-center rounded-full bg-zinc-200 px-5 text-sm font-medium text-zinc-900 select-none active:bg-zinc-300 dark:bg-zinc-800 dark:text-zinc-50 dark:active:bg-zinc-700"
-        >
-          Ir al inicio
+        </Button>
+        <Link href="/" className="block">
+          <Button variant="secondary" className="w-full">
+            Ir al inicio
+          </Button>
         </Link>
       </div>
     </div>

@@ -13,6 +13,8 @@
 // por debajo del loading.tsx, nunca el layout.js que vive en su misma
 // carpeta (ver node_modules/next/dist/docs/.../loading.md). Por eso este
 // archivo va acá, un nivel arriba, donde sí cubre a (app)/layout.tsx.
+import { CartLogo } from "@/components/ui";
+
 export default function Loading() {
   return (
     <div
@@ -20,26 +22,7 @@ export default function Loading() {
       aria-live="polite"
       aria-busy="true"
     >
-      <div className="flex h-14 w-14 animate-pulse items-center justify-center rounded-2xl bg-[#16A34A] text-white">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={1.8}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="h-8 w-8"
-        >
-          <path d="m15 11-1 9" />
-          <path d="m19 11-4-7" />
-          <path d="M2 11h20" />
-          <path d="m3.5 11 1.6 7.4a2 2 0 0 0 2 1.6h9.8a2 2 0 0 0 2-1.6l1.7-7.4" />
-          <path d="M4.5 15.5h15" />
-          <path d="m5 11 4-7" />
-          <path d="m9 11 1 9" />
-        </svg>
-      </div>
+      <CartLogo className="h-14 w-14 animate-pulse" iconClassName="h-8 w-8" />
       <p className="text-sm text-zinc-400">Cargando…</p>
     </div>
   );

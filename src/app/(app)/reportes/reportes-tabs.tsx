@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Badge, SegmentedControl } from "@/components/ui";
 import { ReportesClient } from "./reportes-client";
 import { PurchaseHistory } from "./purchase-history";
 import { SuggestionsPanel, type ProductSuggestion } from "./suggestions-panel";
@@ -59,34 +60,22 @@ export function ReportesTabs({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex gap-1 rounded-full bg-zinc-100 p-1 text-sm font-medium dark:bg-zinc-900">
-        <button
-          type="button"
-          onClick={() => setTab("resumen")}
-          className={`flex-1 select-none touch-manipulation rounded-full py-2 transition-colors ${tab === "resumen" ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50" : "text-zinc-500"}`}
-        >
-          Resumen
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab("historial")}
-          className={`flex-1 select-none touch-manipulation rounded-full py-2 transition-colors ${tab === "historial" ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50" : "text-zinc-500"}`}
-        >
-          Historial
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab("sugerencias")}
-          className={`relative flex-1 select-none touch-manipulation rounded-full py-2 transition-colors ${tab === "sugerencias" ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50" : "text-zinc-500"}`}
-        >
-          Sugerencias
-          {suggestions.length > 0 && (
-            <span className="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[#16A34A] px-1 text-[10px] font-semibold text-white">
-              {suggestions.length}
-            </span>
-          )}
-        </button>
-      </div>
+      <SegmentedControl
+        value={tab}
+        onChange={setTab}
+        options={[
+          { value: "resumen", label: "Resumen" },
+          { value: "historial", label: "Historial" },
+          {
+            value: "sugerencias",
+            label: "Sugerencias",
+            badge:
+              suggestions.length > 0 ? (
+                <Badge variant="brand">{suggestions.length}</Badge>
+              ) : undefined,
+          },
+        ]}
+      />
 
       {tab === "resumen" && (
         <ReportesClient

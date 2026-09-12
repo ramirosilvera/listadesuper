@@ -7,7 +7,7 @@ export function ListSkeleton({ rows = 4 }: { rows?: number }) {
   return (
     <div className="flex flex-col gap-4 pb-4" aria-live="polite" aria-busy="true">
       <div className="h-11 w-full animate-pulse rounded-lg bg-zinc-100 dark:bg-zinc-800" />
-      <ul className="overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-800">
+      <ul className="shadow-soft overflow-hidden rounded-xl border border-zinc-200/70 dark:border-zinc-800">
         {Array.from({ length: rows }).map((_, i) => (
           <li
             key={i}

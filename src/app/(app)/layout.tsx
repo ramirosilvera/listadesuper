@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getActiveHousehold } from "@/lib/household";
+import { CartLogo } from "@/components/ui";
 import { NavBar } from "./nav-bar";
 import { InstallPrompt } from "./install-prompt";
 
@@ -23,28 +24,9 @@ export default async function AppLayout({
         }}
       >
         <div className="mx-auto flex max-w-2xl items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#16A34A] text-white">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="h-5 w-5"
-              >
-                <path d="m15 11-1 9" />
-                <path d="m19 11-4-7" />
-                <path d="M2 11h20" />
-                <path d="m3.5 11 1.6 7.4a2 2 0 0 0 2 1.6h9.8a2 2 0 0 0 2-1.6l1.7-7.4" />
-                <path d="M4.5 15.5h15" />
-                <path d="m5 11 4-7" />
-                <path d="m9 11 1 9" />
-              </svg>
-            </div>
-            <span className="font-semibold text-zinc-900 dark:text-zinc-50">
+          <div className="flex items-center gap-2.5">
+            <CartLogo className="h-8 w-8 rounded-lg" iconClassName="h-5 w-5" />
+            <span className="font-display font-semibold text-zinc-900 dark:text-zinc-50">
               {household.name}
             </span>
           </div>

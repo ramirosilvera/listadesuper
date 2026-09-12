@@ -99,7 +99,7 @@ export function AjustesClient({
     <div className="flex flex-col gap-4 pb-4">
       <Card>
         <p className="text-sm text-zinc-500">Hogar</p>
-        <p className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+        <p className="font-display text-lg font-semibold text-zinc-900 dark:text-zinc-50">
           {household.name}
         </p>
         <p className="mt-1 text-sm text-zinc-500">
@@ -188,14 +188,14 @@ export function AjustesClient({
                       ¿Eliminar &quot;{p.name}&quot; definitivamente? A diferencia de
                       archivar, esto no se puede deshacer.
                     </span>
-                    <button
-                      type="button"
+                    <Button
+                      variant="danger"
+                      size="sm"
                       disabled={deletingId === p.id}
                       onClick={() => deleteProduct(p)}
-                      className="min-h-8 select-none touch-manipulation rounded-full bg-red-600 px-3 text-xs font-medium text-white active:bg-red-700 disabled:opacity-50"
                     >
                       {deletingId === p.id ? "Eliminando…" : "Sí, eliminar"}
-                    </button>
+                    </Button>
                     <button
                       type="button"
                       onClick={() => setConfirmDeleteId(null)}

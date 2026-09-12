@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Card } from "@/components/ui";
+import { Button, Card, CartLogo } from "@/components/ui";
 
 // Ver docs/plan.md (Fase 13). Android e iOS no tienen NADA en común acá:
 // Android/Chrome expone un evento programático (`beforeinstallprompt`)
@@ -143,26 +143,7 @@ export function InstallPrompt() {
 
   return (
     <Card className="mb-4 flex items-start gap-3 p-4">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#16A34A] text-white">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={1.8}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="h-5 w-5"
-        >
-          <path d="m15 11-1 9" />
-          <path d="m19 11-4-7" />
-          <path d="M2 11h20" />
-          <path d="m3.5 11 1.6 7.4a2 2 0 0 0 2 1.6h9.8a2 2 0 0 0 2-1.6l1.7-7.4" />
-          <path d="M4.5 15.5h15" />
-          <path d="m5 11 4-7" />
-          <path d="m9 11 1 9" />
-        </svg>
-      </div>
+      <CartLogo className="h-10 w-10 shrink-0 rounded-xl" iconClassName="h-5 w-5" />
 
       <div className="min-w-0 flex-1">
         {mode === "android" && (
@@ -174,14 +155,9 @@ export function InstallPrompt() {
               Acceso directo, sin abrir el navegador cada vez.
             </p>
             <div className="mt-2 flex gap-2">
-              <button
-                type="button"
-                onClick={handleInstall}
-                disabled={installing}
-                className="min-h-8 select-none touch-manipulation rounded-full bg-[#16A34A] px-3 text-xs font-medium text-white active:bg-[#15803D] disabled:opacity-50"
-              >
+              <Button size="sm" onClick={handleInstall} disabled={installing}>
                 {installing ? "Un momento…" : "Agregar"}
-              </button>
+              </Button>
               <button
                 type="button"
                 onClick={handleDismiss}

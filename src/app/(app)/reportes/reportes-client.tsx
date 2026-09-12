@@ -62,7 +62,7 @@ function StatTile({
     <Card className="flex-1 p-3">
       <p className="text-xs text-zinc-500">{label}</p>
       <p
-        className={`mt-1 text-xl font-semibold tabular-nums ${
+        className={`font-display mt-1 text-xl font-semibold tabular-nums ${
           tone === "critical"
             ? "text-red-600 dark:text-red-400"
             : tone === "warning"

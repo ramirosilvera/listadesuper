@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { RestockChips } from "@/components/restock-chips";
-import { Button, Input } from "@/components/ui";
+import { Button, IconButton, Input } from "@/components/ui";
 
 type Product = {
   id: string;
@@ -314,7 +314,7 @@ export function ShoppingListClient({
           onChange={(e) => setQuery(e.target.value)}
         />
         {query.trim() && (
-          <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-lg dark:border-zinc-800 dark:bg-zinc-900">
+          <div className="shadow-elevated absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
             {productSuggestions.map((p) => (
               <button
                 key={p.id}
@@ -351,7 +351,7 @@ export function ShoppingListClient({
             <button
               type="submit"
               disabled={adding}
-              className="block w-full border-t border-zinc-200 px-3 py-2 text-left text-sm font-medium text-[#16A34A] hover:bg-zinc-100 dark:border-zinc-800 dark:hover:bg-zinc-800"
+              className="text-brand-600 block w-full border-t border-zinc-200 px-3 py-2 text-left text-sm font-medium hover:bg-zinc-100 dark:border-zinc-800 dark:hover:bg-zinc-800"
             >
               + Agregar &quot;{query.trim()}&quot;
             </button>
@@ -383,11 +383,11 @@ export function ShoppingListClient({
           <h2 className="mb-1 px-1 text-xs font-semibold tracking-wide text-zinc-400 uppercase">
             {group.label}
           </h2>
-          <ul className="overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-800">
+          <ul className="shadow-soft overflow-hidden rounded-xl border border-zinc-200/70 dark:border-zinc-800">
             {group.items.map((item) => (
               <li
                 key={item.id}
-                className="flex items-center gap-1 border-b border-zinc-100 bg-white pr-1 pl-1 last:border-b-0 dark:border-zinc-900 dark:bg-zinc-950"
+                className="flex items-center gap-1 border-b border-zinc-100 bg-white pr-1 pl-1 transition-colors last:border-b-0 dark:border-zinc-900 dark:bg-zinc-950"
               >
                 <button
                   type="button"
@@ -396,14 +396,14 @@ export function ShoppingListClient({
                   className="flex h-11 w-11 shrink-0 select-none items-center justify-center"
                 >
                   <span
-                    className={`flex h-6 w-6 items-center justify-center rounded-full border-2 ${
+                    className={`flex h-6 w-6 items-center justify-center rounded-full border-2 transition-colors ${
                       item.checked
-                        ? "border-[#16A34A] bg-[#16A34A] text-white"
+                        ? "border-brand-600 bg-brand-600 text-white"
                         : "border-zinc-300 dark:border-zinc-700"
                     }`}
                   >
                     {item.checked && (
-                      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
+                      <svg viewBox="0 0 24 24" className="h-4 w-4 animate-[check-in_0.15s_ease-out]" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
                         <path d="M20 6 9 17l-5-5" />
                       </svg>
                     )}
@@ -411,34 +411,24 @@ export function ShoppingListClient({
                 </button>
 
                 <span
-                  className={`min-w-0 flex-1 truncate py-2.5 text-sm ${item.checked ? "text-zinc-400 line-through" : "text-zinc-900 dark:text-zinc-50"}`}
+                  className={`min-w-0 flex-1 truncate py-2.5 text-sm transition-colors ${item.checked ? "text-zinc-400 line-through" : "text-zinc-900 dark:text-zinc-50"}`}
                 >
                   {item.products?.name ?? "Producto"}
                 </span>
 
                 <div className="flex shrink-0 items-center gap-1 text-sm text-zinc-600 dark:text-zinc-400">
-                  <button
-                    type="button"
-                    onClick={() => changeQuantity(item, -1)}
-                    className="flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-full bg-zinc-100 active:bg-zinc-200 dark:bg-zinc-800 dark:active:bg-zinc-700"
-                    aria-label="Restar"
-                  >
+                  <IconButton onClick={() => changeQuantity(item, -1)} aria-label="Restar">
                     −
-                  </button>
+                  </IconButton>
                   <span className="w-8 text-center tabular-nums">
                     {item.quantity}
                     <span className="ml-0.5 text-xs text-zinc-400">
                       {item.products?.unit_label}
                     </span>
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => changeQuantity(item, 1)}
-                    className="flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-full bg-zinc-100 active:bg-zinc-200 dark:bg-zinc-800 dark:active:bg-zinc-700"
-                    aria-label="Sumar"
-                  >
+                  <IconButton onClick={() => changeQuantity(item, 1)} aria-label="Sumar">
                     +
-                  </button>
+                  </IconButton>
                 </div>
 
                 <button
@@ -466,7 +456,7 @@ export function ShoppingListClient({
           style={{ bottom: "calc(4rem + env(safe-area-inset-bottom))" }}
         >
           <Link href="/comprar">
-            <Button className="w-full shadow-lg">
+            <Button className="shadow-elevated w-full">
               Confirmar compra ({checkedCount})
             </Button>
           </Link>

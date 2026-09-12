@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Button, Input, Card } from "@/components/ui";
+import { Button, Input, Card, SegmentedControl } from "@/components/ui";
 
 export function OnboardingForm() {
   const router = useRouter();
@@ -53,22 +53,15 @@ export function OnboardingForm() {
 
   return (
     <Card className="w-full max-w-sm">
-      <div className="mb-5 flex gap-1 rounded-full bg-zinc-100 p-1 text-sm font-medium dark:bg-zinc-900">
-        <button
-          type="button"
-          onClick={() => setMode("create")}
-          className={`flex-1 select-none touch-manipulation rounded-full py-2 transition-colors ${mode === "create" ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50" : "text-zinc-500"}`}
-        >
-          Crear hogar
-        </button>
-        <button
-          type="button"
-          onClick={() => setMode("join")}
-          className={`flex-1 select-none touch-manipulation rounded-full py-2 transition-colors ${mode === "join" ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50" : "text-zinc-500"}`}
-        >
-          Unirme con código
-        </button>
-      </div>
+      <SegmentedControl
+        className="mb-5"
+        value={mode}
+        onChange={setMode}
+        options={[
+          { value: "create", label: "Crear hogar" },
+          { value: "join", label: "Unirme con código" },
+        ]}
+      />
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
         {mode === "create" ? (

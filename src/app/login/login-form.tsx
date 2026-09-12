@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Button, Input, Card } from "@/components/ui";
+import { Button, Input, Card, SegmentedControl } from "@/components/ui";
 
 export function LoginForm() {
   const router = useRouter();
@@ -75,25 +75,18 @@ export function LoginForm() {
 
   return (
     <Card className="mt-8 w-full max-w-sm">
-      <div className="mb-5 flex gap-1 rounded-full bg-zinc-100 p-1 text-sm font-medium dark:bg-zinc-900">
-        <button
-          type="button"
-          onClick={() => setMode("login")}
-          className={`flex-1 select-none touch-manipulation rounded-full py-2 transition-colors ${mode === "login" ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50" : "text-zinc-500"}`}
-        >
-          Entrar
-        </button>
-        <button
-          type="button"
-          onClick={() => setMode("signup")}
-          className={`flex-1 select-none touch-manipulation rounded-full py-2 transition-colors ${mode === "signup" ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50" : "text-zinc-500"}`}
-        >
-          Crear cuenta
-        </button>
-      </div>
+      <SegmentedControl
+        className="mb-5"
+        value={mode}
+        onChange={setMode}
+        options={[
+          { value: "login", label: "Entrar" },
+          { value: "signup", label: "Crear cuenta" },
+        ]}
+      />
 
       {next && (
-        <p className="mb-3 rounded-lg bg-[#16A34A]/10 px-3 py-2 text-xs text-[#15803D] dark:text-[#4ADE80]">
+        <p className="bg-brand-600/10 text-brand-700 dark:text-brand-400 mb-3 rounded-lg px-3 py-2 text-xs">
           {mode === "signup" ? "Creá tu cuenta para" : "Iniciá sesión para"}{" "}
           unirte al hogar que te invitó.
         </p>
@@ -129,9 +122,7 @@ export function LoginForm() {
         {error && (
           <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
         )}
-        {info && (
-          <p className="text-sm text-[#16A34A]">{info}</p>
-        )}
+        {info && <p className="text-brand-600 text-sm">{info}</p>}
 
         <Button type="submit" disabled={loading} className="mt-2 w-full">
           {loading

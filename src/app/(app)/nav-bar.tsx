@@ -2,6 +2,7 @@
 
 import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
+import { CartMark, cx } from "@/components/ui";
 
 const TABS = [
   { href: "/lista", label: "Lista", icon: ListIcon },
@@ -53,14 +54,20 @@ export function NavBar() {
             <Link
               key={tab.href}
               href={tab.href}
-              className={`relative flex flex-1 flex-col items-center justify-center gap-1 text-xs font-medium ${
-                active
-                  ? "text-[#16A34A]"
-                  : "text-zinc-500 dark:text-zinc-400"
-              }`}
+              className={cx(
+                "relative flex flex-1 flex-col items-center justify-center gap-1 text-xs font-medium",
+                active ? "text-brand-600" : "text-zinc-500 dark:text-zinc-400",
+              )}
             >
               <TabTapHint />
-              <Icon className="h-6 w-6" active={!!active} />
+              <span
+                className={cx(
+                  "flex h-8 w-12 items-center justify-center rounded-full transition-colors",
+                  active && "bg-brand-50 dark:bg-brand-950/40",
+                )}
+              >
+                <Icon className="h-6 w-6" active={!!active} />
+              </span>
               {tab.label}
             </Link>
           );
@@ -106,17 +113,7 @@ function BoxIcon({ className, active }: { className?: string; active: boolean })
 }
 
 function CartIcon({ className, active }: { className?: string; active: boolean }) {
-  return (
-    <svg className={className} {...iconProps(active)}>
-      <path d="m15 11-1 9" />
-      <path d="m19 11-4-7" />
-      <path d="M2 11h20" />
-      <path d="m3.5 11 1.6 7.4a2 2 0 0 0 2 1.6h9.8a2 2 0 0 0 2-1.6l1.7-7.4" />
-      <path d="M4.5 15.5h15" />
-      <path d="m5 11 4-7" />
-      <path d="m9 11 1 9" />
-    </svg>
-  );
+  return <CartMark className={className} strokeWidth={active ? 2.2 : 1.8} />;
 }
 
 function ChartIcon({ className, active }: { className?: string; active: boolean }) {

@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Card } from "@/components/ui";
+import { Button, Card } from "@/components/ui";
 
 export type ProductSuggestion = {
   product_id: string;
@@ -157,14 +157,9 @@ export function SuggestionsPanel({
                           Stock y en sugeridos para reponer (se puede
                           reactivar después desde Ajustes).
                         </span>
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() => apply(s)}
-                          className="min-h-8 select-none touch-manipulation rounded-full bg-red-600 px-3 text-xs font-medium text-white active:bg-red-700 disabled:opacity-50"
-                        >
+                        <Button variant="danger" size="sm" disabled={busy} onClick={() => apply(s)}>
                           {busy ? "Archivando…" : "Sí, archivar"}
-                        </button>
+                        </Button>
                         <button
                           type="button"
                           onClick={() => setConfirmKey(null)}
@@ -175,24 +170,17 @@ export function SuggestionsPanel({
                       </div>
                     ) : (
                       <div className="flex gap-2">
-                        <button
-                          type="button"
+                        <Button
+                          size="sm"
+                          className="flex-1"
                           disabled={busy}
-                          onClick={() =>
-                            needsConfirm ? setConfirmKey(k) : apply(s)
-                          }
-                          className="min-h-9 flex-1 select-none touch-manipulation rounded-full bg-[#16A34A] px-3 text-xs font-medium text-white active:bg-[#15803D] disabled:opacity-50"
+                          onClick={() => (needsConfirm ? setConfirmKey(k) : apply(s))}
                         >
                           {busy ? "Aplicando…" : GROUP_META[group.type].applyLabel(s)}
-                        </button>
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() => dismiss(s)}
-                          className="min-h-9 select-none touch-manipulation rounded-full px-3 text-xs text-zinc-500 active:bg-zinc-100 disabled:opacity-50 dark:active:bg-zinc-900"
-                        >
+                        </Button>
+                        <Button variant="ghost" size="sm" disabled={busy} onClick={() => dismiss(s)}>
                           Descartar
-                        </button>
+                        </Button>
                       </div>
                     )}
                   </Card>

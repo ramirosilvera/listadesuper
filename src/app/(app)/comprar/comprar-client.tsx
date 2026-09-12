@@ -282,7 +282,7 @@ export function ComprarClient({
           onChange={(e) => setQuery(e.target.value)}
         />
         {query.trim() && (
-          <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-lg dark:border-zinc-800 dark:bg-zinc-900">
+          <div className="shadow-elevated absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
             {productSuggestions.map((p) => (
               <button
                 key={p.id}
@@ -318,7 +318,7 @@ export function ComprarClient({
             )}
             <button
               type="submit"
-              className="block w-full border-t border-zinc-200 px-3 py-2 text-left text-sm font-medium text-[#16A34A] hover:bg-zinc-100 dark:border-zinc-800 dark:hover:bg-zinc-800"
+              className="text-brand-600 block w-full border-t border-zinc-200 px-3 py-2 text-left text-sm font-medium hover:bg-zinc-100 dark:border-zinc-800 dark:hover:bg-zinc-800"
             >
               + Agregar &quot;{query.trim()}&quot;
             </button>
@@ -382,7 +382,7 @@ export function ComprarClient({
           los vas poniendo en el changuito.
         </p>
       ) : (
-        <ul className="overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-800">
+        <ul className="shadow-soft overflow-hidden rounded-xl border border-zinc-200/70 dark:border-zinc-800">
           {rows.map((row) => (
             <li
               key={row.key}
@@ -524,7 +524,7 @@ export function ComprarClient({
         <Button
           onClick={() => handleSubmit(false)}
           disabled={submitting || rows.length === 0 || !!duplicateWarning}
-          className="w-full shadow-lg"
+          className="shadow-elevated w-full"
         >
           {submitting ? "Registrando…" : "Confirmar compra"}
         </Button>

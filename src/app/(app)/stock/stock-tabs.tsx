@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Badge, SegmentedControl } from "@/components/ui";
 import { StockClient } from "./stock-client";
 import { VencimientosTab } from "./vencimientos-tab";
 
@@ -57,27 +58,23 @@ export function StockTabs({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex gap-1 rounded-full bg-zinc-100 p-1 text-sm font-medium dark:bg-zinc-900">
-        <button
-          type="button"
-          onClick={() => setTab("stock")}
-          className={`flex-1 select-none touch-manipulation rounded-full py-2 transition-colors ${tab === "stock" ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50" : "text-zinc-500"}`}
-        >
-          Stock
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab("vencimientos")}
-          className={`relative flex-1 select-none touch-manipulation rounded-full py-2 transition-colors ${tab === "vencimientos" ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50" : "text-zinc-500"}`}
-        >
-          Vencimientos
-          {soonCount > 0 && (
-            <span className="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-xs text-white">
-              {soonCount}
-            </span>
-          )}
-        </button>
-      </div>
+      <SegmentedControl
+        value={tab}
+        onChange={setTab}
+        options={[
+          { value: "stock", label: "Stock" },
+          {
+            value: "vencimientos",
+            label: "Vencimientos",
+            badge:
+              soonCount > 0 ? (
+                <Badge variant="danger" className="ml-0.5">
+                  {soonCount}
+                </Badge>
+              ) : undefined,
+          },
+        ]}
+      />
 
       {tab === "stock" ? (
         <StockClient householdId={householdId} products={products} categories={categories} />

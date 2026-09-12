@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Input } from "@/components/ui";
+import { Button, IconButton, Input } from "@/components/ui";
 
 const BANNER_DISMISS_KEY = "listasuper:stock-estimado-banner-dismissed";
 
@@ -423,7 +423,7 @@ export function StockClient({
           <h2 className="mb-1 px-1 text-xs font-semibold tracking-wide text-zinc-400 uppercase">
             {group.label}
           </h2>
-          <ul className="overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-800">
+          <ul className="shadow-soft overflow-hidden rounded-xl border border-zinc-200/70 dark:border-zinc-800">
             {group.items.map((p) => {
               const level = stockLevel(p);
               const isEditingSettings = editingSettingsId === p.id;
@@ -464,7 +464,7 @@ export function StockClient({
                         ? "bg-red-500"
                         : level === "low"
                           ? "bg-amber-500"
-                          : "bg-[#16A34A]"
+                          : "bg-brand-600"
                     }`}
                     aria-hidden
                   />
@@ -503,26 +503,16 @@ export function StockClient({
 
                 <div className="flex items-center justify-between gap-2 pl-[1.125rem]">
                   <div className="flex items-center gap-1.5 text-sm text-zinc-600 dark:text-zinc-400">
-                    <button
-                      type="button"
-                      onClick={() => adjust(p, -1)}
-                      className="flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-full bg-zinc-100 active:bg-zinc-200 dark:bg-zinc-800 dark:active:bg-zinc-700"
-                      aria-label="Restar"
-                    >
+                    <IconButton onClick={() => adjust(p, -1)} aria-label="Restar">
                       −
-                    </button>
+                    </IconButton>
                     <span className="w-9 text-center tabular-nums">
                       {p.quantity_on_hand}
                       <span className="ml-0.5 text-xs text-zinc-400">{p.unit_label}</span>
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => adjust(p, 1)}
-                      className="flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-full bg-zinc-100 active:bg-zinc-200 dark:bg-zinc-800 dark:active:bg-zinc-700"
-                      aria-label="Sumar"
-                    >
+                    <IconButton onClick={() => adjust(p, 1)} aria-label="Sumar">
                       +
-                    </button>
+                    </IconButton>
                   </div>
                   <div className="flex items-center">
                     <button
@@ -553,7 +543,7 @@ export function StockClient({
                       }
                       aria-label={`Configurar avisos de ${p.name}`}
                       className={`flex h-9 w-9 shrink-0 select-none items-center justify-center ${
-                        isEditingSettings ? "text-[#16A34A]" : "text-zinc-400 active:text-zinc-600 dark:active:text-zinc-300"
+                        isEditingSettings ? "text-brand-600" : "text-zinc-400 active:text-zinc-600 dark:active:text-zinc-300"
                       }`}
                     >
                       <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
@@ -581,14 +571,14 @@ export function StockClient({
                     <span className="flex-1">
                       ¿Quitar &quot;{p.name}&quot; del catálogo? No va a figurar más en Stock ni en sugeridos para reponer.
                     </span>
-                    <button
-                      type="button"
+                    <Button
+                      variant="danger"
+                      size="sm"
                       disabled={archiving === p.id}
                       onClick={() => archiveProduct(p)}
-                      className="min-h-8 select-none touch-manipulation rounded-full bg-red-600 px-3 text-xs font-medium text-white active:bg-red-700 disabled:opacity-50"
                     >
                       {archiving === p.id ? "Quitando…" : "Sí, quitar"}
-                    </button>
+                    </Button>
                     <button
                       type="button"
                       onClick={() => setConfirmArchiveId(null)}
@@ -710,13 +700,9 @@ export function StockClient({
                       </div>
                     ) : (
                       <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => saveSettings(p)}
-                          className="min-h-9 select-none touch-manipulation rounded-full bg-[#16A34A] px-3 text-xs font-medium text-white active:bg-[#15803D]"
-                        >
+                        <Button variant="primary" size="sm" onClick={() => saveSettings(p)}>
                           Guardar
-                        </button>
+                        </Button>
                         <button
                           type="button"
                           onClick={() => {
