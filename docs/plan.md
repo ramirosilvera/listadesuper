@@ -763,6 +763,20 @@ El usuario adjuntó una captura real de Stock mostrando el bug: el nombre "Aceit
 
 ---
 
+## Ciclo de compra vencido: alerta sí, resetear stock a 0 no
+
+Pedido del usuario: que al cumplirse el ciclo de compra de un producto, además de la alerta, el stock se resetee a 0 — "el sistema asume que ya no hay stock". Objetivo declarado: automatizar listas y stock al máximo, con mínima supervisión, **para garantizar precisión**. Roles: datos/integridad (qué le pasa a la precisión con el mecanismo propuesto) e ingeniería de automatización (cómo lograr el objetivo real sin ese costo).
+
+**Se investigó antes de implementar el pedido tal cual, como exige la regla fundamental de Consejo**: el ciclo de compra (`restock_cycle_days`) es un promedio de hábito declarado por la familia ("compramos esto cada 28 días, más o menos"), no una medición real de cuánto queda. **JUICIO, y el motivo central de esta decisión**: forzar `quantity_on_hand` a 0 automáticamente al cumplirse el ciclo fabrica un dato falso en el caso, nada raro, de que en la práctica todavía quede algo (compraron 2 la última vez, usaron 1) — y esa falsedad se arrastra sola para siempre, porque el pedido explícito es "mínima supervisión": nadie la va a corregir a mano. Es decir, el mecanismo propuesto **degrada exactamente la precisión que el pedido dice perseguir**, no la mejora. Hay además un costo técnico concreto: `avg_daily_consumption` (la predicción por consumo real, ver Fase 8) se calcula contando movimientos de `stock_movements` con `delta < 0` como consumo genuino — un reseteo automático periódico se mezclaría con esos movimientos y ensuciaría esa predicción con eventos que no son consumo real.
+
+**Lo que sí automatiza el objetivo real (avisar solo, sin supervisión) sin ese costo**: la vista `product_replenishment` (Fase 8) ya calcula en cada consulta, sin ningún cron ni trabajo en segundo plano, si el ciclo de un producto está vencido (`restock_reason = 'ciclo_de_compra'`) — ese cálculo alimenta hace tiempo los sugeridos de Lista y Comprar, pero **nunca llegaba a Stock**. Se cerró ese hueco: `stock/page.tsx` ahora trae también esa columna y la fusiona en cada producto como `cycle_alert`; `stockLevel()` (la función ya unificada que define el punto de color y el filtro "Bajo stock") trata `cycle_alert` igual que `needs_restock` — mismo punto ámbar, mismo texto de estado ("Hace tiempo no lo comprás", la misma frase que ya usa `restockReasonLabel`), mismo lugar en el filtro "Bajo stock". El ciclo vencido ahora se ve y se puede accionar desde Stock sin que nadie tenga que configurar nada nuevo (el `restock_cycle_days` de cada producto ya estaba cargado desde la Fase 8) — la automatización real que pedía el usuario, sin fabricar cantidades.
+
+**HECHO verificado sobre el hogar real, que cambia el alcance práctico de esta fase**: hoy, los 66 productos con ciclo configurado tienen `days_since_last_restock = 0` para todos — el "último restock" que usa la vista todavía es la carga inicial de la Fase 6 (de hace horas, no de hace semanas), así que ningún ciclo está realmente vencido todavía y esta alerta no va a mostrar nada por varias semanas. Es esperable, no un bug: recién va a empezar a activarse a medida que pasen los días reales desde la carga inicial.
+
+**Verificado**: se simuló un ciclo vencido de verdad en una transacción con `rollback` (se adelantó `created_at` de la carga inicial de "Aceite de oliva genérico", ciclo 28 días, a 40 días atrás) y se confirmó que `product_replenishment` lo marca correctamente (`restock_reason='ciclo_de_compra'`, `should_restock=true`) con RLS real — sin persistir nada de prueba. `npm run build`/`npm run lint` limpios. Sin migración: `cycle_alert` se calcula leyendo una vista que ya existía, no hay cambios de esquema.
+
+---
+
 ## Fase 24: eliminar definitivamente productos archivados
 
 Pedido del usuario, con motivo concreto: hay productos del import inicial (Fase 1) archivados por ser duplicados, ambiguos o incompletos, y "no tiene sentido archivarlos para siempre". Roles: integridad de datos (qué se pierde realmente al borrar) y seguridad/RLS (dónde debe vivir la restricción).

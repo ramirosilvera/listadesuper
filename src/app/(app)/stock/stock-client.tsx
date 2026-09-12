@@ -16,6 +16,7 @@ type Product = {
   restock_cycle_days: number | null;
   last_restocked_at: string | null;
   needs_restock: boolean;
+  cycle_alert: boolean;
 };
 
 type Category = { id: string; name: string; sort_order: number };
@@ -24,19 +25,25 @@ const LAST_RESTOCK_FMT = new Intl.DateTimeFormat("es-AR", { day: "2-digit", mont
 
 // "Vacío" siempre se marca (0 unidades es un hecho, no depende de gusto).
 // "Bajo" depende de low_stock_threshold (cada quien configura cuánto
-// quiere tener de ese producto) O de needs_restock, la marca manual de
-// "está abierto y queda poco" -- para productos donde a propósito no se
-// quiere tener más de 1 unidad (ej. "no quiero más de 1 aceite de oliva
-// genérico"), quantity_on_hand se queda fijo en 1 mientras la botella
-// abierta se vacía, sin que ningún número lo refleje. Mismo criterio que
-// ya usa product_replenishment.should_restock (Fases 8 y 25) para el
-// aviso de reposición -- no una cuarta definición distinta de "poco
-// stock" a la que ya existe en el resto de la app.
+// quiere tener de ese producto), de needs_restock (marca manual de "está
+// abierto y queda poco" -- Fase 25), o de cycle_alert (hace más de
+// restock_cycle_days que no se compra -- Fase 8). Las tres son distintas
+// formas de detectar lo mismo, ya unificadas en
+// product_replenishment.should_restock -- acá se reusa esa misma unión,
+// no se define "poco stock" por cuarta vez.
+//
+// Deliberadamente NO se resetea quantity_on_hand a 0 cuando se cumple el
+// ciclo (se evaluó y se descartó, ver docs/plan.md): el ciclo es un
+// promedio de hábito, no una medición real -- forzar el número a 0
+// fabricaría una cantidad falsa cada vez que en la práctica todavía
+// quedara algo, y esa cantidad falsa quedaría arrastrada para siempre en
+// el conteo (nadie la corrige, es justo lo que se pidió automatizar).
+// Cycle_alert dispara la MISMA alerta visual sin tocar el número real.
 function stockLevel(
-  p: Pick<Product, "quantity_on_hand" | "low_stock_threshold" | "needs_restock">,
+  p: Pick<Product, "quantity_on_hand" | "low_stock_threshold" | "needs_restock" | "cycle_alert">,
 ) {
   if (p.quantity_on_hand <= 0) return "empty" as const;
-  if (p.needs_restock) return "low" as const;
+  if (p.needs_restock || p.cycle_alert) return "low" as const;
   if (p.low_stock_threshold !== null && p.quantity_on_hand <= p.low_stock_threshold) {
     return "low" as const;
   }
@@ -421,11 +428,13 @@ export function StockClient({
               // a una fila propia.
               const statusText = p.needs_restock
                 ? "Marcado para reponer"
-                : p.last_restocked_at
-                  ? `Última compra: ${LAST_RESTOCK_FMT.format(new Date(p.last_restocked_at))}`
-                  : p.quantity_on_hand > 0
-                    ? "Cantidad inicial (estimado)"
-                    : null;
+                : p.cycle_alert
+                  ? "Hace tiempo no lo comprás"
+                  : p.last_restocked_at
+                    ? `Última compra: ${LAST_RESTOCK_FMT.format(new Date(p.last_restocked_at))}`
+                    : p.quantity_on_hand > 0
+                      ? "Cantidad inicial (estimado)"
+                      : null;
               return (
                 <li
                   key={p.id}
@@ -452,7 +461,7 @@ export function StockClient({
                     {statusText && (
                       <span
                         className={
-                          p.needs_restock
+                          p.needs_restock || p.cycle_alert
                             ? "font-medium text-amber-600 dark:text-amber-400"
                             : "text-zinc-400"
                         }

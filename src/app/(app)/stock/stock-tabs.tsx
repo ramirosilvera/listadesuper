@@ -14,6 +14,7 @@ type Product = {
   restock_cycle_days: number | null;
   last_restocked_at: string | null;
   needs_restock: boolean;
+  cycle_alert: boolean;
 };
 
 type Category = { id: string; name: string; sort_order: number };

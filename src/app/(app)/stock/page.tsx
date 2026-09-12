@@ -16,6 +16,7 @@ export default async function StockPage() {
     { data: categories },
     { data: expirations },
     { data: realPurchases },
+    { data: replenishment },
   ] = await Promise.all([
     supabase
       .from("products")
@@ -52,6 +53,17 @@ export default async function StockPage() {
       .eq("household_id", household.id)
       .eq("reason", "purchase")
       .order("created_at", { ascending: false }),
+    // "Hace cuanto no lo comprás" (Fase 8, restock_cycle_days): se lee acá
+    // en vez de recalcularlo en el cliente para no duplicar la lógica de
+    // la vista product_replenishment -- solo se usa el motivo
+    // 'ciclo_de_compra' para marcar "bajo stock" por ciclo vencido, sin
+    // tocar quantity_on_hand (ver docs/plan.md: pedido de resetear stock a
+    // 0 automáticamente al vencer el ciclo, descartado por fabricar una
+    // cantidad que no es real -- el ciclo solo alimenta la alerta).
+    supabase
+      .from("product_replenishment")
+      .select("product_id, restock_reason")
+      .eq("household_id", household.id),
   ]);
 
   const stockByProduct = new Map(
@@ -66,10 +78,17 @@ export default async function StockPage() {
     }
   }
 
+  const cycleAlertByProduct = new Set(
+    (replenishment ?? [])
+      .filter((r) => r.restock_reason === "ciclo_de_compra")
+      .map((r) => r.product_id),
+  );
+
   const rows = (products ?? []).map((p) => ({
     ...p,
     quantity_on_hand: stockByProduct.get(p.id) ?? 0,
     last_restocked_at: lastRestockByProduct.get(p.id) ?? null,
+    cycle_alert: cycleAlertByProduct.has(p.id),
   }));
 
   // La vista product_expirations_upcoming no tiene una PK declarada para
