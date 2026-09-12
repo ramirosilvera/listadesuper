@@ -313,3 +313,30 @@ El usuario pidió que actuara como su esposa recibiendo la app por primera vez p
 Verificado con `tsc --noEmit`, `npm run lint` y `npm run build` limpios.
 
 No se armó splash screen específico para iOS (`apple-touch-startup-image` por tamaño de dispositivo) — es papeleo de bajo impacto para un hogar de 2 personas; se puede sumar más adelante si se nota falta.
+
+---
+
+## Revisión de ciclos de compra con datos reales (a pedido del usuario)
+
+El usuario pidió revisar los `restock_cycle_days` de todo el catálogo dado un hecho nuevo: la familia va **todas las semanas** al súper. La ronda anterior (Fase 8) había usado 3 niveles genéricos (15/21/30 días) basados en supuestos de uso típico, sin ese dato.
+
+**Cambio de método**: en vez de repetir el mismo tipo de estimación genérica, se usó `frecuencia_historica` del CSV original (`data/seed/productos_historico.csv`) — cuántas veces aparece cada producto en el historial real de Google Keep del usuario — como evidencia principal, calibrada contra el hecho de que compran cada 7 días:
+
+| frecuencia histórica | ciclo asignado |
+|---|---|
+| ≥ 12 | 7 días (casi todas las semanas) |
+| 6-11 | 14 días |
+| 4-5 | 21 días |
+| 2-3 | 28 días |
+| 1 / ambiguo | sin ciclo (no hay patrón real de recompra) |
+
+Esto **corrigió varios supuestos equivocados** de la ronda anterior: por ejemplo, Yerba mate y Agua mineral se habían puesto en 15 días asumiendo consumo diario típico argentino, pero el historial real muestra frecuencia 3 y 1 respectivamente — se ajustaron a 21 días y sin ciclo. Yogur y Queso rallado, que se habían marcado como uso frecuente, en el historial real aparecen una sola vez — se les sacó el ciclo.
+
+**Excepciones deliberadas a la fórmula (juicio, no el cálculo automático)**:
+- **Aceite de oliva** se dejó en 28 días (no 14, que hubiera sugerido la frecuencia 6) porque el usuario dijo explícitamente en un pedido anterior que lo compran "una vez por mes" — su palabra directa pesa más que la inferencia del historial.
+- **Pan y Tarta** se dejaron sin ciclo a propósito: con 3 días de vida útil, Vencimientos ya avisa mucho antes que cualquier ciclo — sumarlo sería redundante.
+- **Insecticidas/repelentes** se dejaron todos sin ciclo por ser estacionales, aunque alguno tuviera frecuencia 2.
+- **Productos de bebé** (toallitas húmedas, jabones) mantuvieron un ciclo pese a frecuencia histórica baja: el historial de Keep no necesariamente cubre el tiempo en que la bebé ya estaba en la familia, y la necesidad es actual y va a seguir.
+- Los 2 productos agregados por uso real después de la carga inicial ("Pizza Sibarita", "Enjuague bucal") no se tocaron — no hay dato histórico para ellos y "Enjuague bucal" ya tenía un ciclo cargado manualmente por el propio usuario.
+
+**Resultado aplicado y verificado** en el hogar real: 6 productos a 7 días, 9 a 14, 23 a 21, 26 a 28, y 77 sin ciclo (de 139 productos del catálogo original, sin tocar los 2 agregados manualmente). Se confirmó que esto no generó sugerencias nuevas de golpe (0 activadas por `ciclo_de_compra` todavía — recién se cargó stock "hoy", ningún ciclo cumplió su plazo aún) y que las 40 sugerencias existentes por umbral de stock siguen iguales. Cambio de datos puro, sin tocar esquema ni código — no hizo falta migración.
