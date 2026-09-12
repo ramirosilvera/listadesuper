@@ -53,8 +53,29 @@ export function ShoppingListClient({
   const [suggestions, setSuggestions] = useState(initialSuggestions);
   const [query, setQuery] = useState("");
   const [adding, setAdding] = useState(false);
+  // "reconnecting" (no "connecting" inicial) a propósito: no queremos
+  // mostrar nada en el arranque normal de la página, solo cuando el
+  // canal YA estaba conectado y se cae -- eso es lo que de verdad importa
+  // avisar (mala señal en el súper, el caso de uso central de la app).
+  const [realtimeStatus, setRealtimeStatus] = useState<"connected" | "reconnecting">("connected");
 
   useEffect(() => {
+    let active = true;
+    let everConnected = false;
+
+    // Postgres Changes no reproduce los eventos perdidos durante un corte
+    // al reconectar (a diferencia de "broadcast" con replay, que es otra
+    // cosa) -- sin este refetch, dos personas del hogar con mala señal en
+    // el súper podían terminar viendo listas desincronizadas en silencio
+    // hasta refrescar a mano.
+    async function refetchItems() {
+      const { data } = await supabase
+        .from("shopping_list_items")
+        .select("id, quantity, checked, product_id, products(id, name, unit_label, category_id)")
+        .eq("list_id", listId);
+      if (active && data) setItems(data as ListItem[]);
+    }
+
     const channel = supabase
       .channel(`shopping_list_items:${listId}`)
       .on(
@@ -118,9 +139,23 @@ export function ShoppingListClient({
           }
         },
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (!active) return;
+        if (status === "SUBSCRIBED") {
+          setRealtimeStatus("connected");
+          if (everConnected) refetchItems();
+          everConnected = true;
+        } else if (
+          status === "CHANNEL_ERROR" ||
+          status === "TIMED_OUT" ||
+          status === "CLOSED"
+        ) {
+          setRealtimeStatus("reconnecting");
+        }
+      });
 
     return () => {
+      active = false;
       supabase.removeChannel(channel);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -246,6 +281,16 @@ export function ShoppingListClient({
 
   return (
     <div className="flex flex-col gap-4 pb-4">
+      {realtimeStatus === "reconnecting" && (
+        <p
+          className="flex items-center gap-1.5 rounded-full bg-zinc-100 px-3 py-1.5 text-xs text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400"
+          aria-live="polite"
+        >
+          <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-zinc-400" aria-hidden />
+          Reconectando — lo que cambien otros en la lista puede tardar en verse.
+        </p>
+      )}
+
       <form onSubmit={handleAddSubmit} className="relative">
         <Input
           placeholder="Agregar producto…"

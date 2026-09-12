@@ -605,3 +605,21 @@ El usuario pidió que Huevos se pueda cargar en unidades de 6, porque en la prá
 **No se tocó** `data/seed/productos_historico.csv` (el archivo de importación inicial, ya usado una sola vez en Fase 1 y no se vuelve a correr): sigue diciendo "docena" porque es un registro de lo que decía el histórico de Google Keep en su momento, no la definición vigente — declarado a propósito como una divergencia menor entre el archivo histórico y el catálogo real, no un error a corregir.
 
 Cambio de dato puro, sin migración ni cambio de código (verificado que `unit_label` no está hardcodeado en ningún lugar del frontend, `grep` sobre `src/` no encontró ninguna referencia a "docena").
+
+---
+
+## Fase 19: reconexión de Realtime en Lista
+
+Pendiente declarado en la Fase 18 (auditoría integral): el canal de Realtime de Lista se desuscribía bien al desmontar, pero no manejaba una caída de conexión real — con mala señal en el súper (el caso de uso central de la app), la lista podía quedar desincronizada en silencio entre los celulares del hogar. El usuario pidió retomarlo. Roles: ingeniería de tiempo real/sistemas distribuidos, UX (comunicar el estado de conexión sin generar ruido), confiabilidad (condiciones reales de wifi de supermercado).
+
+**Investigación primero, no se asumió el comportamiento de la librería** (tal como exige AGENTS.md para código específico de una dependencia): se leyó el código fuente TypeScript empaquetado de `@supabase/realtime-js` (`node_modules/@supabase/realtime-js/src/RealtimeClient.ts` y `RealtimeChannel.ts`, la fuente canónica según el propio `AGENTS.md` de `@supabase/supabase-js`) en vez de asumir de memoria. Dos hechos verificados ahí, no supuestos:
+
+1. **El socket YA reconecta solo**: tiene heartbeat + reconexión automática con backoff progresivo (`reconnectAfterMs`) — no hacía falta reimplementar la reconexión en sí, ya la maneja la librería.
+2. **Pero "postgres_changes" no reproduce lo que se perdió durante el corte**: el "replay" de la librería solo aplica a mensajes de `broadcast` en canales privados, no a cambios de tabla. Un canal que se cae y se reconecta vuelve a recibir eventos NUEVOS desde ese momento, sin ponerse al día con lo que pasó mientras estuvo desconectado. Esto confirma que el hallazgo de la auditoría era real: sin algo adicional, dos personas con un corte de señal pueden terminar viendo listas distintas sin ningún aviso.
+
+**Qué se construyó** en `shopping-list-client.tsx`:
+- El callback de `.subscribe((status) => ...)` ahora seguido de sus 4 estados posibles (`SUBSCRIBED`, `CHANNEL_ERROR`, `TIMED_OUT`, `CLOSED`, confirmados en el enum `REALTIME_SUBSCRIBE_STATES` de la librería). Un estado nuevo, `realtimeStatus`, pasa a `"reconnecting"` ante cualquiera de los tres estados de caída.
+- **Refetch al reconectar**: en vez de intentar reconciliar evento por evento lo que se perdió (imposible sin esos eventos), al volver a `SUBSCRIBED` **después de haber estado conectado antes** se vuelve a pedir toda la lista completa al servidor y se reemplaza el estado local — la forma simple y correcta de ponerse al día con un "no sé qué me perdí, pido todo de nuevo". La condición "después de haber estado conectado antes" evita un refetch redundante en el arranque normal de la página (la primera vez que el canal se suscribe, ya se acaba de cargar todo desde el servidor).
+- **Aviso visible pero discreto** (rol UX, criterio de "no generar ruido" ya establecido en rondas anteriores): un texto chico con un punto pulsante ("Reconectando — lo que cambien otros en la lista puede tardar en verse") aparece SOLO cuando el canal está caído, y desaparece solo al reconectar. No aparece en el arranque normal de la página — sería ruido sin valor real, la conexión inicial tarda lo mismo que siempre tardó.
+
+**Limitación declarada, no resuelta esta ronda**: no hay forma de simular un corte de wifi real de supermercado en este entorno (sin browser real ni control de red) para verificar el comportamiento end-to-end. Se verificó lo que sí se pudo sin eso: la lectura del código fuente de la librería (no una suposición), que los 4 estados usados existen tal cual en el enum de la librería instalada, y que `npm run build`/`npm run lint` compilan y tipan limpio.
