@@ -204,39 +204,33 @@ export function ComprarClient({
 
   return (
     <div className="flex flex-col gap-4 pb-24">
-      <div>
-        <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-          Supermercado (opcional)
-        </label>
-        <div className="mt-1 flex gap-2">
-          <select
-            className="min-h-11 flex-1 rounded-lg border border-zinc-300 bg-white px-3 text-base dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
-            value={storeId}
-            onChange={(e) => {
-              setStoreId(e.target.value);
-              setNewStoreName("");
-            }}
-          >
-            <option value="">Sin especificar</option>
-            {stores.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
+      <form onSubmit={addNewProduct} className="relative">
+        <Input
+          placeholder="Agregar producto a la compra…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+        {query.trim() && (
+          <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-lg dark:border-zinc-800 dark:bg-zinc-900">
+            {productSuggestions.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => addRow(p)}
+                className="block w-full px-3 py-2 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              >
+                {p.name}
+              </button>
             ))}
-            <option value="__new__" disabled>
-              — o escribí uno nuevo abajo —
-            </option>
-          </select>
-        </div>
-        {!storeId && (
-          <Input
-            className="mt-2"
-            placeholder="Nombre de un supermercado nuevo (opcional)"
-            value={newStoreName}
-            onChange={(e) => setNewStoreName(e.target.value)}
-          />
+            <button
+              type="submit"
+              className="block w-full border-t border-zinc-200 px-3 py-2 text-left text-sm font-medium text-[#16A34A] hover:bg-zinc-100 dark:border-zinc-800 dark:hover:bg-zinc-800"
+            >
+              + Agregar &quot;{query.trim()}&quot;
+            </button>
+          </div>
         )}
-      </div>
+      </form>
 
       {restockChips.length > 0 && (
         <div>
@@ -276,33 +270,39 @@ export function ComprarClient({
         </div>
       )}
 
-      <form onSubmit={addNewProduct} className="relative">
-        <Input
-          placeholder="Agregar producto a la compra…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-        {query.trim() && (
-          <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-lg dark:border-zinc-800 dark:bg-zinc-900">
-            {productSuggestions.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => addRow(p)}
-                className="block w-full px-3 py-2 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800"
-              >
-                {p.name}
-              </button>
+      <div>
+        <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+          Supermercado (opcional)
+        </label>
+        <div className="mt-1 flex gap-2">
+          <select
+            className="min-h-11 flex-1 rounded-lg border border-zinc-300 bg-white px-3 text-base dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+            value={storeId}
+            onChange={(e) => {
+              setStoreId(e.target.value);
+              setNewStoreName("");
+            }}
+          >
+            <option value="">Sin especificar</option>
+            {stores.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
             ))}
-            <button
-              type="submit"
-              className="block w-full border-t border-zinc-200 px-3 py-2 text-left text-sm font-medium text-[#16A34A] hover:bg-zinc-100 dark:border-zinc-800 dark:hover:bg-zinc-800"
-            >
-              + Agregar &quot;{query.trim()}&quot;
-            </button>
-          </div>
+            <option value="__new__" disabled>
+              — o escribí uno nuevo abajo —
+            </option>
+          </select>
+        </div>
+        {!storeId && (
+          <Input
+            className="mt-2"
+            placeholder="Nombre de un supermercado nuevo (opcional)"
+            value={newStoreName}
+            onChange={(e) => setNewStoreName(e.target.value)}
+          />
         )}
-      </form>
+      </div>
 
       {rows.length === 0 ? (
         <p className="py-8 text-center text-sm text-zinc-500">

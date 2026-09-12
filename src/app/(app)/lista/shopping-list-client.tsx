@@ -239,6 +239,35 @@ export function ShoppingListClient({
 
   return (
     <div className="flex flex-col gap-4 pb-4">
+      <form onSubmit={handleAddSubmit} className="relative">
+        <Input
+          placeholder="Agregar producto…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+        {query.trim() && (
+          <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-lg dark:border-zinc-800 dark:bg-zinc-900">
+            {productSuggestions.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => addExistingProduct(p)}
+                className="block w-full px-3 py-2 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              >
+                {p.name}
+              </button>
+            ))}
+            <button
+              type="submit"
+              disabled={adding}
+              className="block w-full border-t border-zinc-200 px-3 py-2 text-left text-sm font-medium text-[#16A34A] hover:bg-zinc-100 dark:border-zinc-800 dark:hover:bg-zinc-800"
+            >
+              + Agregar &quot;{query.trim()}&quot;
+            </button>
+          </div>
+        )}
+      </form>
+
       {suggestions.length > 0 && (
         <div>
           <h2 className="mb-1.5 px-1 text-xs font-semibold tracking-wide text-zinc-400 uppercase">
@@ -273,35 +302,6 @@ export function ShoppingListClient({
           </div>
         </div>
       )}
-
-      <form onSubmit={handleAddSubmit} className="relative">
-        <Input
-          placeholder="Agregar producto…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-        {query.trim() && (
-          <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-lg dark:border-zinc-800 dark:bg-zinc-900">
-            {productSuggestions.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => addExistingProduct(p)}
-                className="block w-full px-3 py-2 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800"
-              >
-                {p.name}
-              </button>
-            ))}
-            <button
-              type="submit"
-              disabled={adding}
-              className="block w-full border-t border-zinc-200 px-3 py-2 text-left text-sm font-medium text-[#16A34A] hover:bg-zinc-100 dark:border-zinc-800 dark:hover:bg-zinc-800"
-            >
-              + Agregar &quot;{query.trim()}&quot;
-            </button>
-          </div>
-        )}
-      </form>
 
       {items.length === 0 && (
         <p className="py-12 text-center text-sm text-zinc-500">
