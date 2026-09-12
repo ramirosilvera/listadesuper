@@ -340,3 +340,30 @@ Esto **corrigió varios supuestos equivocados** de la ronda anterior: por ejempl
 - Los 2 productos agregados por uso real después de la carga inicial ("Pizza Sibarita", "Enjuague bucal") no se tocaron — no hay dato histórico para ellos y "Enjuague bucal" ya tenía un ciclo cargado manualmente por el propio usuario.
 
 **Resultado aplicado y verificado** en el hogar real: 6 productos a 7 días, 9 a 14, 23 a 21, 26 a 28, y 77 sin ciclo (de 139 productos del catálogo original, sin tocar los 2 agregados manualmente). Se confirmó que esto no generó sugerencias nuevas de golpe (0 activadas por `ciclo_de_compra` todavía — recién se cargó stock "hoy", ningún ciclo cumplió su plazo aún) y que las 40 sugerencias existentes por umbral de stock siguen iguales. Cambio de datos puro, sin tocar esquema ni código — no hizo falta migración.
+
+---
+
+## Revisión de vencimientos (`default_shelf_life_days`) con fuentes oficiales
+
+El usuario pidió revisar los vencimientos sugeridos del stock con web search y fuentes confiables, en vez de estimación propia. Se priorizaron los productos lácteos frescos: son los de mayor riesgo real (una fecha mal calculada ahí puede llevar a comer algo en mal estado, a diferencia de un almacén no perecedero donde el peor caso es un aviso de más). Fuente principal: **USDA FoodKeeper** (desarrollada por el Food Safety and Inspection Service del USDA con Cornell University y el Food Marketing Institute — foodsafety.gov), citada vía búsqueda web con varias fuentes secundarias que la referencian directamente.
+
+**Cambios aplicados** (valor anterior → nuevo, con la guía que lo respalda):
+- **Leche** (genérica/ambigua — ya estaba marcada "a confirmar" desde la importación original): 90 → **7 días**. El USDA indica que la leche abierta dura ~7 días en heladera; 90 días solo tendría sentido si fuera 100% larga vida (UHT) sin abrir, pero eso ya está cubierto por el producto separado "Leche larga vida" (se dejó en 90). Ante la ambigüedad ya señalada, se corrigió hacia el valor más conservador (más seguro) en vez del más largo.
+- **Manteca**: 20 → **45 días**. El USDA indica manteca con sal: 1-3 meses refrigerada después de la fecha impresa. El valor anterior era demasiado corto — generaba avisos de "se vence" para manteca que en realidad todavía está bien (mismo problema de "falsa alarma" ya corregido antes con el pan).
+- **Queso crema**: 30 → **14 días**. El USDA es explícito: queso crema abierto, 2 semanas. El valor anterior casi lo duplicaba.
+- **Queso cremoso**: 20 → 15 días. Ajuste parcial hacia la categoría "quesos blandos" del USDA (7 días) sin adoptarla del todo — el "queso cremoso" argentino es más firme que un queso blando tipo brie/ricotta y no hay una fuente que lo mapee 1 a 1; se marca como **límite de la fuente** (JUICIO, no dato verificado directamente).
+- **Queso duro / Queso para rallar**: 60 → **45 días** cada uno. El USDA dice 3-4 semanas para queso duro ya abierto, pero estos productos se compran en pieza entera para rallar en casa (dura más que un bloque ya cortado) — se corrigió hacia abajo sin adoptar el número más corto de "ya abierto".
+
+**Revisado y dejado igual (ya estaba bien respaldado)**: Huevos (21 días cae dentro del rango USDA de 3-5 semanas), Crema de leche (10 días coincide exactamente con la guía de USDA para crema abierta), Mayonesa (90 días está en el límite superior del rango USDA de 60-90 días), Arroz/Fideos/Harina/Azúcar/Sal/Aceite (todos los valores actuales ya son iguales o más conservadores que la guía de "años" para productos de almacén no perecederos). **Pan** se dejó en 3 días a propósito: la guía de USDA sobre "pan comercial" (14-18 días) aplica a pan envasado con conservantes; el "Pan" de esta familia es, con altísima probabilidad, pan de panadería fresco sin conservantes (frecuencia histórica muy alta, compra frecuente) — un producto distinto, con vida útil real mucho más corta, y aplicar la cifra genérica de EE.UU. hubiera sido un error.
+
+Se actualizaron también las 6 fechas de vencimiento ya sembradas en Fase 6 para estos productos (recalculadas desde la misma fecha de carga inicial con el nuevo `default_shelf_life_days`), no solo el valor por defecto para compras futuras — si no, el catálogo hubiera quedado corregido pero el aviso activo de Leche hubiera seguido mostrando diciembre en vez de la fecha real corregida (18/09).
+
+**Limitación declarada**: no se revisaron con fuentes externas los productos de limpieza, higiene, insecticidas ni bienes durables — no tienen una "fecha de vencimiento" en el sentido de seguridad alimentaria (es más bien pérdida de eficacia), y no hay una fuente única y confiable equivalente al USDA FoodKeeper para esa categoría. Se mantiene lo ya cargado. Cambio de datos puro, sin tocar esquema ni código.
+
+Fuentes consultadas (USDA FoodKeeper y fuentes que lo citan directamente):
+- [ask.fsis.usda.gov — How long can you keep dairy products like yogurt, milk, and cheese in the refrigerator?](https://ask.fsis.usda.gov/article/How-long-can-you-keep-dairy-products-like-yogurt-milk-and-cheese-in-the-refrigerator)
+- [fsis.usda.gov — Shell Eggs from Farm to Table](https://www.fsis.usda.gov/food-safety/safe-food-handling-and-preparation/eggs/shell-eggs-farm-table)
+- [fsis.usda.gov — Shelf-Stable Food Safety](https://www.fsis.usda.gov/food-safety/safe-food-handling-and-preparation/food-safety-basics/shelf-stable-food)
+- [survivalfreedom.com — How Long Does Butter Last? (USDA Guidelines)](https://survivalfreedom.com/how-long-does-butter-last/)
+- [pantryprofessor.com — How Long Does Mayonnaise (Opened) Last?](https://pantryprofessor.com/food-storage/mayo/)
+- [onbetterliving.com / mill.com — Cheese, yogurt, heavy cream shelf life after opening](https://www.mill.com/blog/how-long-does-cheese-last-in-the-fridge)
