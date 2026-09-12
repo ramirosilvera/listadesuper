@@ -285,13 +285,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "products_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "spending_by_category_30d"
-            referencedColumns: ["category_id"]
-          },
-          {
             foreignKeyName: "products_household_id_fkey"
             columns: ["household_id"]
             isOneToOne: false
@@ -756,41 +749,6 @@ export type Database = {
         }
         Relationships: []
       }
-      spending_by_category_30d: {
-        Row: {
-          category_id: string | null
-          category_name: string | null
-          household_id: string | null
-          item_count: number | null
-          total_amount: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "purchases_household_id_fkey"
-            columns: ["household_id"]
-            isOneToOne: false
-            referencedRelation: "households"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      spending_by_week: {
-        Row: {
-          household_id: string | null
-          purchase_count: number | null
-          total_amount: number | null
-          week_start: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "purchases_household_id_fkey"
-            columns: ["household_id"]
-            isOneToOne: false
-            referencedRelation: "households"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       top_products_90d: {
         Row: {
           household_id: string | null
@@ -989,9 +947,3 @@ export type CompositeTypes<
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
-
-export const Constants = {
-  public: {
-    Enums: {},
-  },
-} as const
