@@ -84,6 +84,7 @@ export function ComprarClient({
   const [newStoreName, setNewStoreName] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
 
   const total = rows.reduce((sum, r) => {
     const price = parseFloat(r.unit_price.replace(",", "."));
@@ -142,8 +143,12 @@ export function ComprarClient({
     setRows((prev) => prev.filter((r) => r.key !== key));
   }
 
-  async function handleSubmit() {
+  // confirmDuplicate=true solo se manda cuando la persona ya vio el aviso
+  // de "compra parecida hace poco" (ver record_purchase, Fase 17) y tocó
+  // "Confirmar de todos modos" — la primera vez siempre va en false.
+  async function handleSubmit(confirmDuplicate = false) {
     setError(null);
+    if (!confirmDuplicate) setDuplicateWarning(null);
     if (rows.length === 0) {
       setError("Agregá al menos un producto.");
       return;
@@ -163,6 +168,11 @@ export function ComprarClient({
         return;
       }
       finalStoreId = store.id;
+      // Si hace falta reintentar (ver aviso de posible duplicado más
+      // abajo), que la próxima vuelta reuse este súper en vez de crear
+      // otro con el mismo nombre — sin esto, confirmar una compra
+      // duplicada de un súper recién tipeado duplicaba también el súper.
+      setStoreId(store.id);
     }
 
     const items = rows.map((r) => {
@@ -186,11 +196,23 @@ export function ComprarClient({
       p_source: "manual",
       p_receipt_image_path: null,
       p_items: items,
+      p_confirm_duplicate: confirmDuplicate,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
 
     if (rpcError) {
       setSubmitting(false);
+      // record_purchase (Fase 17) tira este mensaje puntual cuando hay una
+      // compra reciente con productos en común en el mismo hogar — no es
+      // un error real, es un "¿estás seguro?" antes de guardar. El texto
+      // explicativo viaja en el detail de la excepción de Postgres.
+      if (rpcError.message === "possible_duplicate") {
+        setDuplicateWarning(
+          rpcError.details ||
+            "Parece que ya se cargó una compra parecida hace poco.",
+        );
+        return;
+      }
       setError(rpcError.message);
       return;
     }
@@ -359,6 +381,29 @@ export function ComprarClient({
 
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
+      {duplicateWarning && (
+        <div className="flex flex-col gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300">
+          <p>{duplicateWarning} ¿Confirmás que no es un error?</p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={submitting}
+              onClick={() => handleSubmit(true)}
+              className="min-h-8 select-none touch-manipulation rounded-full bg-amber-600 px-3 text-xs font-medium text-white active:bg-amber-700 disabled:opacity-50"
+            >
+              {submitting ? "Registrando…" : "Confirmar de todos modos"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setDuplicateWarning(null)}
+              className="min-h-8 select-none touch-manipulation rounded-full px-2 text-xs text-amber-700 dark:text-amber-300"
+            >
+              Revisar
+            </button>
+          </div>
+        </div>
+      )}
+
       {/*
         bottom: no se usa bottom-16 de Tailwind (fijo) porque la altura
         real del nav de abajo varía con env(safe-area-inset-bottom) según
@@ -370,8 +415,8 @@ export function ComprarClient({
         style={{ bottom: "calc(4rem + env(safe-area-inset-bottom))" }}
       >
         <Button
-          onClick={handleSubmit}
-          disabled={submitting || rows.length === 0}
+          onClick={() => handleSubmit(false)}
+          disabled={submitting || rows.length === 0 || !!duplicateWarning}
           className="w-full shadow-lg"
         >
           {submitting ? "Registrando…" : "Confirmar compra"}

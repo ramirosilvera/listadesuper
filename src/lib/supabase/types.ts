@@ -822,6 +822,7 @@ export type Database = {
       }
       record_purchase: {
         Args: {
+          p_confirm_duplicate?: boolean
           p_household_id: string
           p_items: Json
           p_purchased_at: string
