@@ -64,7 +64,7 @@ export default async function StockPage() {
     // la alerta).
     supabase
       .from("product_replenishment")
-      .select("product_id, restock_reason, cycle_urgency")
+      .select("product_id, restock_reason, cycle_urgency, restock_snoozed_until")
       .eq("household_id", household.id),
   ]);
 
@@ -83,18 +83,25 @@ export default async function StockPage() {
   // cycle_urgency solo viaja para productos con motivo 'ciclo_de_compra':
   // 'vencido'/'esta_semana' son los mismos que antes disparaban should_restock
   // (ahora con margen), 'proxima_semana' es puramente informativo, no
-  // dispara nada -- Stock lo muestra aparte, más suave.
-  const cycleUrgencyByProduct = new Map(
+  // dispara nada -- Stock lo muestra aparte, más suave. restock_snoozed_until
+  // (Fase 30) es la fecha hasta la que la persona pidió no ser molestada con
+  // sugerencias automáticas de este producto (ciclo/predicción) -- null si
+  // nunca lo pospuso o si ya venció el plazo.
+  const replenishmentByProduct = new Map(
     (replenishment ?? [])
-      .filter((r) => r.product_id && r.cycle_urgency)
-      .map((r) => [r.product_id as string, r.cycle_urgency as string]),
+      .filter((r) => r.product_id)
+      .map((r) => [
+        r.product_id as string,
+        { cycle_urgency: r.cycle_urgency, restock_snoozed_until: r.restock_snoozed_until },
+      ]),
   );
 
   const rows = (products ?? []).map((p) => ({
     ...p,
     quantity_on_hand: stockByProduct.get(p.id) ?? 0,
     last_restocked_at: lastRestockByProduct.get(p.id) ?? null,
-    cycle_urgency: cycleUrgencyByProduct.get(p.id) ?? null,
+    cycle_urgency: replenishmentByProduct.get(p.id)?.cycle_urgency ?? null,
+    restock_snoozed_until: replenishmentByProduct.get(p.id)?.restock_snoozed_until ?? null,
   }));
 
   // La vista product_expirations_upcoming no tiene una PK declarada para

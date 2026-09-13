@@ -175,6 +175,7 @@ export type Database = {
         Row: {
           dismissed_at: string
           dismissed_by: string | null
+          dismissed_until: string | null
           dismissed_value: number | null
           household_id: string
           id: string
@@ -184,6 +185,7 @@ export type Database = {
         Insert: {
           dismissed_at?: string
           dismissed_by?: string | null
+          dismissed_until?: string | null
           dismissed_value?: number | null
           household_id: string
           id?: string
@@ -193,6 +195,7 @@ export type Database = {
         Update: {
           dismissed_at?: string
           dismissed_by?: string | null
+          dismissed_until?: string | null
           dismissed_value?: number | null
           household_id?: string
           id?: string
@@ -686,6 +689,7 @@ export type Database = {
           quantity_on_hand: number | null
           restock_cycle_days: number | null
           restock_reason: string | null
+          restock_snoozed_until: string | null
           should_restock: boolean | null
           unit_label: string | null
         }
@@ -822,6 +826,11 @@ export type Database = {
         Returns: undefined
       }
       seed_initial_stock: { Args: { p_household_id: string }; Returns: Json }
+      snooze_restock: {
+        Args: { p_days?: number; p_product_id: string }
+        Returns: undefined
+      }
+      unsnooze_restock: { Args: { p_product_id: string }; Returns: undefined }
     }
     Enums: {
       [_ in never]: never

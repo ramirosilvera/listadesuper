@@ -16,6 +16,7 @@ type Product = {
   last_restocked_at: string | null;
   needs_restock: boolean;
   cycle_urgency: string | null;
+  restock_snoozed_until: string | null;
 };
 
 type Category = { id: string; name: string; sort_order: number };

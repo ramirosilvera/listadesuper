@@ -17,6 +17,7 @@ type Product = {
   last_restocked_at: string | null;
   needs_restock: boolean;
   cycle_urgency: string | null;
+  restock_snoozed_until: string | null;
 };
 
 type Category = { id: string; name: string; sort_order: number };
@@ -51,6 +52,15 @@ function stockLevel(
     return "low" as const;
   }
   return "ok" as const;
+}
+
+// Fase 30: "posponer" -- para productos de consumo irregular donde ni el
+// ciclo ni la predicción por consumo aciertan bien (Consejo con el
+// usuario). Solo silencia esas dos inferencias automáticas; el chequeo es
+// por fecha, no por un booleano guardado, para que "vencer" no dependa de
+// ningún job en el server.
+function isSnoozed(p: Pick<Product, "restock_snoozed_until">): boolean {
+  return p.restock_snoozed_until !== null && new Date(p.restock_snoozed_until) > new Date();
 }
 
 export function StockClient({
@@ -92,6 +102,7 @@ export function StockClient({
   const [confirmArchiveId, setConfirmArchiveId] = useState<string | null>(null);
   const [archiving, setArchiving] = useState<string | null>(null);
   const [bannerDismissed, setBannerDismissed] = useState(true);
+  const [snoozingId, setSnoozingId] = useState<string | null>(null);
 
   useEffect(() => {
     try {
@@ -321,6 +332,40 @@ export function StockClient({
     }
   }
 
+  // Posponer/cancelar (Fase 30): a diferencia de needs_restock (un campo
+  // propio en products), esto vive en product_suggestion_dismissals -- no
+  // hay un valor local que invertir de forma optimista sin duplicar la
+  // lógica de fecha de la vista, así que se pide el estado real recién
+  // calculado después de la RPC en vez de adivinarlo.
+  async function toggleSnooze(product: Product) {
+    setSnoozingId(product.id);
+    const { error } = isSnoozed(product)
+      ? await supabase.rpc("unsnooze_restock", { p_product_id: product.id })
+      : await supabase.rpc("snooze_restock", { p_product_id: product.id });
+
+    if (!error) {
+      const { data } = await supabase
+        .from("product_replenishment")
+        .select("cycle_urgency, restock_snoozed_until")
+        .eq("product_id", product.id)
+        .maybeSingle();
+      if (data) {
+        setProducts((prev) =>
+          prev.map((p) =>
+            p.id === product.id
+              ? {
+                  ...p,
+                  cycle_urgency: data.cycle_urgency,
+                  restock_snoozed_until: data.restock_snoozed_until,
+                }
+              : p,
+          ),
+        );
+      }
+    }
+    setSnoozingId(null);
+  }
+
   // Soft delete: products.archived (no un DELETE real) para no perder el
   // historial de compras/gastos de ese producto en Reportes. Deja de
   // aparecer en Stock, en las sugerencias de reposición y en Vencimientos.
@@ -452,6 +497,7 @@ export function StockClient({
               // número de días configurado. "La semana que viene" es a
               // propósito un texto neutro (ver estilo más abajo, sin
               // ámbar): es información, no una alerta.
+              const snoozed = isSnoozed(p);
               const statusText = p.needs_restock
                 ? "Marcado para reponer"
                 : p.cycle_urgency === "vencido"
@@ -460,11 +506,13 @@ export function StockClient({
                     ? "Tocaría reponer esta semana"
                     : p.cycle_urgency === "proxima_semana"
                       ? "Reponer la semana que viene"
-                      : p.last_restocked_at
-                        ? `Última compra: ${LAST_RESTOCK_FMT.format(new Date(p.last_restocked_at))}`
-                        : p.quantity_on_hand > 0
-                          ? "Cantidad inicial (estimado)"
-                          : null;
+                      : snoozed
+                        ? `Pospuesto hasta el ${LAST_RESTOCK_FMT.format(new Date(p.restock_snoozed_until!))}`
+                        : p.last_restocked_at
+                          ? `Última compra: ${LAST_RESTOCK_FMT.format(new Date(p.last_restocked_at))}`
+                          : p.quantity_on_hand > 0
+                            ? "Cantidad inicial (estimado)"
+                            : null;
               return (
                 <li
                   key={p.id}
@@ -549,6 +597,32 @@ export function StockClient({
                         </span>
                       ) : (
                         <span className="h-5.5 w-5.5 rounded-md border-2 border-zinc-300 dark:border-zinc-700" />
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => toggleSnooze(p)}
+                      disabled={snoozingId === p.id}
+                      aria-label={
+                        snoozed
+                          ? `Dejar de posponer la reposición de "${p.name}"`
+                          : `Posponer sugerencias de reposición de "${p.name}" por 30 días`
+                      }
+                      aria-pressed={snoozed}
+                      className="flex h-9 w-9 shrink-0 select-none items-center justify-center disabled:opacity-50"
+                    >
+                      {snoozed ? (
+                        <span className="flex h-5.5 w-5.5 items-center justify-center rounded-md bg-zinc-600 text-white dark:bg-zinc-500">
+                          <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="9" />
+                            <path d="M12 7v5l3 3" />
+                          </svg>
+                        </span>
+                      ) : (
+                        <svg viewBox="0 0 24 24" className="h-4.5 w-4.5 text-zinc-400 active:text-zinc-600 dark:active:text-zinc-300" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="12" cy="12" r="9" />
+                          <path d="M12 7v5l3 3" />
+                        </svg>
                       )}
                     </button>
                     <button
