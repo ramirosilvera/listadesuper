@@ -13,9 +13,12 @@ type PurchaseItem = {
 type Purchase = {
   id: string;
   purchased_at: string;
+  created_by: string;
   stores: { name: string } | null;
   purchase_items: PurchaseItem[];
 };
+
+type Member = { id: string; display_name: string };
 
 type DayGroup = {
   dayKey: string;
@@ -124,9 +127,11 @@ function downloadJson(filename: string, data: unknown) {
 function ExportPanel({
   householdId,
   householdName,
+  nameByUser,
 }: {
   householdId: string;
   householdName: string;
+  nameByUser: Map<string, string>;
 }) {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
@@ -140,7 +145,7 @@ function ExportPanel({
     let query = supabase
       .from("purchases")
       .select(
-        "id, purchased_at, stores(name), purchase_items(id, quantity, products(name, unit_label))",
+        "id, purchased_at, created_by, stores(name), purchase_items(id, quantity, products(name, unit_label))",
       )
       .eq("household_id", householdId)
       .order("purchased_at", { ascending: true });
@@ -170,6 +175,7 @@ function ExportPanel({
         compras: data.map((p) => ({
           id: p.id,
           fecha: p.purchased_at,
+          registrado_por: nameByUser.get(p.created_by) ?? null,
           supermercado: p.stores?.name ?? null,
           items: p.purchase_items.map((it) => ({
             producto: it.products?.name ?? null,
@@ -256,13 +262,19 @@ export function PurchaseHistory({
   purchases,
   householdId,
   householdName,
+  members,
 }: {
   purchases: Purchase[];
   householdId: string;
   householdName: string;
+  members: Member[];
 }) {
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
   const days = useMemo(() => groupByDay(purchases), [purchases]);
+  const nameByUser = useMemo(
+    () => new Map(members.map((m) => [m.id, m.display_name])),
+    [members],
+  );
 
   if (purchases.length === 0) {
     return (
@@ -275,11 +287,20 @@ export function PurchaseHistory({
 
   return (
     <div className="flex flex-col gap-3">
-      <ExportPanel householdId={householdId} householdName={householdName} />
+      <ExportPanel
+        householdId={householdId}
+        householdName={householdName}
+        nameByUser={nameByUser}
+      />
       <ul className="flex flex-col gap-2">
       {days.map((group) => {
         const expanded = expandedDay === group.dayKey;
         const multi = group.purchases.length > 1;
+        // Solo se muestra "quién" en el encabezado colapsado cuando no hay
+        // ambigüedad (una sola compra ese día) -- si hubo varias tandas,
+        // pueden ser de personas distintas, así que el nombre se ve recién
+        // al expandir, junto a cada tanda.
+        const soleName = !multi ? nameByUser.get(group.purchases[0].created_by) : undefined;
         return (
           <li key={group.dayKey}>
             <Card className="overflow-hidden p-0">
@@ -296,6 +317,7 @@ export function PurchaseHistory({
                     {group.storesLabel} · {group.itemCount} producto
                     {group.itemCount === 1 ? "" : "s"}
                     {multi ? ` (${group.purchases.length} compras)` : ""}
+                    {soleName ? ` · ${soleName}` : ""}
                   </p>
                 </div>
                 <svg
@@ -323,6 +345,9 @@ export function PurchaseHistory({
                           <div className="px-4 pt-2.5 pb-1 text-xs text-zinc-500">
                             {TIME_FMT.format(new Date(purchase.purchased_at))} ·{" "}
                             {purchase.stores?.name ?? "Sin especificar"}
+                            {nameByUser.get(purchase.created_by)
+                              ? ` · ${nameByUser.get(purchase.created_by)}`
+                              : ""}
                           </div>
                           <ul className="divide-y divide-zinc-100 dark:divide-zinc-900">
                             {purchase.purchase_items.map((item) => (

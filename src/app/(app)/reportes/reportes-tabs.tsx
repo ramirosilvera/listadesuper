@@ -21,13 +21,17 @@ type PurchaseItem = {
 type Purchase = {
   id: string;
   purchased_at: string;
+  created_by: string;
   stores: { name: string } | null;
   purchase_items: PurchaseItem[];
 };
 
+type Member = { id: string; display_name: string };
+
 export function ReportesTabs({
   householdId,
   householdName,
+  members,
   topProducts,
   urgentExpirations,
   restockCount,
@@ -36,6 +40,7 @@ export function ReportesTabs({
 }: {
   householdId: string;
   householdName: string;
+  members: Member[];
   topProducts: TopProduct[];
   urgentExpirations: number;
   restockCount: number;
@@ -75,6 +80,7 @@ export function ReportesTabs({
           purchases={purchases}
           householdId={householdId}
           householdName={householdName}
+          members={members}
         />
       )}
       {tab === "sugerencias" && <SuggestionsPanel suggestions={suggestions} />}

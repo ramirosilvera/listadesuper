@@ -17,6 +17,7 @@ export default async function ReportesPage() {
     { data: replenishment },
     { data: purchases },
     { data: suggestions },
+    { data: householdMembers },
   ] = await Promise.all([
     supabase
       .from("top_products_90d")
@@ -40,7 +41,7 @@ export default async function ReportesPage() {
     supabase
       .from("purchases")
       .select(
-        "id, purchased_at, stores(name), purchase_items(id, quantity, products(name, unit_label))",
+        "id, purchased_at, created_by, stores(name), purchase_items(id, quantity, products(name, unit_label))",
       )
       .eq("household_id", household.id)
       .order("purchased_at", { ascending: false })
@@ -51,7 +52,18 @@ export default async function ReportesPage() {
       .eq("household_id", household.id)
       .order("suggestion_type", { ascending: true })
       .order("name", { ascending: true }),
+    supabase.from("household_members").select("user_id").eq("household_id", household.id),
   ]);
+
+  // Nombres de quienes integran el hogar (Fase 32) -- para mostrar "quién"
+  // registró cada compra en Historial y en el export JSON, en vez de un id
+  // interno. profiles no tiene household_id propio (una persona pertenece a
+  // un solo hogar a la vez), así que se filtra por los ids de
+  // household_members en vez de poder pedirlo con un solo select anidado.
+  const { data: members } = await supabase
+    .from("profiles")
+    .select("id, display_name")
+    .in("id", (householdMembers ?? []).map((m) => m.user_id));
 
   const urgentExpirations = (expirationsUpcoming ?? []).filter(
     (e) => e.level === "expired" || e.level === "red",
@@ -61,6 +73,7 @@ export default async function ReportesPage() {
     <ReportesTabs
       householdId={household.id}
       householdName={household.name}
+      members={members ?? []}
       topProducts={topProducts ?? []}
       urgentExpirations={urgentExpirations}
       restockCount={(replenishment ?? []).length}
