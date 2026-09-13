@@ -121,6 +121,20 @@ export function ComprarClient({
     return suggestions.filter((s) => s.product_id && !already.has(s.product_id));
   }, [suggestions, rows]);
 
+  // Posponer desde el chip (Fase 30/31): misma acción que ya existe en
+  // Stock, disponible también donde se ve la sugerencia -- a pedido del
+  // usuario. Optimista con rollback: si la RPC falla, el chip vuelve.
+  async function snoozeSuggestion(s: Suggestion) {
+    if (!s.product_id) return;
+    setSuggestions((prev) => prev.filter((x) => x.product_id !== s.product_id));
+    const { error } = await supabase.rpc("snooze_restock", { p_product_id: s.product_id });
+    if (error) {
+      setSuggestions((prev) =>
+        prev.some((x) => x.product_id === s.product_id) ? prev : [...prev, s],
+      );
+    }
+  }
+
   function addRow(product: Product) {
     setQuery("");
     setNewProductCategoryId("");
@@ -318,6 +332,7 @@ export function ComprarClient({
       <RestockChips
         title="Sugeridos para reponer"
         suggestions={restockChips}
+        onSnooze={snoozeSuggestion}
         onAdd={(s) => {
           const product = allProducts.find((p) => p.id === s.product_id);
           addRow(

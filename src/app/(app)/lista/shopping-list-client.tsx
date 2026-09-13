@@ -266,6 +266,20 @@ export function ShoppingListClient({
     }
   }
 
+  // Posponer desde el chip (Fase 30/31): misma acción que ya existe en
+  // Stock, disponible también donde se ve la sugerencia -- a pedido del
+  // usuario. Optimista con rollback: si la RPC falla, el chip vuelve.
+  async function snoozeSuggestion(s: Suggestion) {
+    if (!s.product_id) return;
+    setSuggestions((prev) => prev.filter((x) => x.product_id !== s.product_id));
+    const { error } = await supabase.rpc("snooze_restock", { p_product_id: s.product_id });
+    if (error) {
+      setSuggestions((prev) =>
+        prev.some((x) => x.product_id === s.product_id) ? prev : [...prev, s],
+      );
+    }
+  }
+
   async function handleAddSubmit(e: FormEvent) {
     e.preventDefault();
     const name = query.trim();
@@ -363,6 +377,7 @@ export function ShoppingListClient({
       <RestockChips
         title="Se están por acabar"
         suggestions={suggestions}
+        onSnooze={snoozeSuggestion}
         onAdd={(s) =>
           addExistingProduct({
             id: s.product_id!,
