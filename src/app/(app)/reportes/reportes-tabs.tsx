@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 import { Badge, SegmentedControl } from "@/components/ui";
 import { ReportesClient } from "./reportes-client";
 import { PurchaseHistory } from "./purchase-history";
@@ -37,6 +38,7 @@ export function ReportesTabs({
   restockCount,
   purchases,
   suggestions,
+  unreadSuggestions,
 }: {
   householdId: string;
   householdName: string;
@@ -46,24 +48,36 @@ export function ReportesTabs({
   restockCount: number;
   purchases: Purchase[];
   suggestions: ProductSuggestion[];
+  unreadSuggestions: number;
 }) {
   const [tab, setTab] = useState<"resumen" | "historial" | "sugerencias">("resumen");
+  const [unread, setUnread] = useState(unreadSuggestions);
+  const supabase = useMemo(() => createClient(), []);
+
+  // Fase 34: abrir la pestaña marca todo lo visible como leído para esta
+  // persona -- mismo criterio que "abriste la bandeja". No hace falta
+  // esperar la confirmación del server para bajar el badge: si falla, la
+  // próxima carga de la página lo vuelve a mostrar.
+  function handleTabChange(next: "resumen" | "historial" | "sugerencias") {
+    setTab(next);
+    if (next === "sugerencias" && unread > 0) {
+      setUnread(0);
+      supabase.rpc("mark_suggestions_seen", { p_household_id: householdId });
+    }
+  }
 
   return (
     <div className="flex flex-col gap-4">
       <SegmentedControl
         value={tab}
-        onChange={setTab}
+        onChange={handleTabChange}
         options={[
           { value: "resumen", label: "Resumen" },
           { value: "historial", label: "Historial" },
           {
             value: "sugerencias",
             label: "Sugerencias",
-            badge:
-              suggestions.length > 0 ? (
-                <Badge variant="brand">{suggestions.length}</Badge>
-              ) : undefined,
+            badge: unread > 0 ? <Badge variant="brand">{unread}</Badge> : undefined,
           },
         ]}
       />

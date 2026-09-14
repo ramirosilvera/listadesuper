@@ -622,6 +622,62 @@ export type Database = {
           },
         ]
       }
+      suggestion_seen: {
+        Row: {
+          household_id: string
+          product_id: string
+          seen_at: string
+          suggested_value: number
+          suggestion_type: string
+          user_id: string
+        }
+        Insert: {
+          household_id: string
+          product_id: string
+          seen_at?: string
+          suggested_value?: number
+          suggestion_type: string
+          user_id: string
+        }
+        Update: {
+          household_id?: string
+          product_id?: string
+          seen_at?: string
+          suggested_value?: number
+          suggestion_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "suggestion_seen_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "households"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "suggestion_seen_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "product_replenishment"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "suggestion_seen_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "suggestion_seen_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "top_products_90d"
+            referencedColumns: ["product_id"]
+          },
+        ]
+      }
     }
     Views: {
       my_membership: {
@@ -826,6 +882,10 @@ export type Database = {
       join_household_by_code: {
         Args: { p_invite_code: string }
         Returns: string
+      }
+      mark_suggestions_seen: {
+        Args: { p_household_id: string }
+        Returns: undefined
       }
       record_purchase: {
         Args: {
