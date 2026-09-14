@@ -39,37 +39,51 @@ export default async function ListaPage() {
   const supabase = await createClient();
   const listId = await getOrCreateActiveList(household.id);
 
-  const [{ data: items }, { data: products }, { data: categories }, { data: replenishment }] =
-    await Promise.all([
-      supabase
-        .from("shopping_list_items")
-        .select(
-          "id, quantity, checked, product_id, products(id, name, unit_label, category_id)",
-        )
-        .eq("list_id", listId)
-        .order("created_at", { ascending: true }),
-      supabase
-        .from("products")
-        .select("id, name, unit_label, category_id")
-        .eq("household_id", household.id)
-        .eq("archived", false)
-        .order("name", { ascending: true }),
-      supabase
-        .from("categories")
-        .select("id, name, sort_order")
-        .eq("household_id", household.id)
-        .order("sort_order", { ascending: true }),
-      supabase
-        .from("product_replenishment")
-        .select("product_id, name, unit_label, restock_reason, days_since_last_restock")
-        .eq("household_id", household.id)
-        .eq("should_restock", true),
-    ]);
+  const [
+    { data: items },
+    { data: products },
+    { data: categories },
+    { data: replenishment },
+    { data: householdMembers },
+  ] = await Promise.all([
+    supabase
+      .from("shopping_list_items")
+      .select(
+        "id, quantity, checked, product_id, added_by, products(id, name, unit_label, category_id)",
+      )
+      .eq("list_id", listId)
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("products")
+      .select("id, name, unit_label, category_id")
+      .eq("household_id", household.id)
+      .eq("archived", false)
+      .order("name", { ascending: true }),
+    supabase
+      .from("categories")
+      .select("id, name, sort_order")
+      .eq("household_id", household.id)
+      .order("sort_order", { ascending: true }),
+    supabase
+      .from("product_replenishment")
+      .select("product_id, name, unit_label, restock_reason, days_since_last_restock")
+      .eq("household_id", household.id)
+      .eq("should_restock", true),
+    supabase.from("household_members").select("user_id").eq("household_id", household.id),
+  ]);
 
   const idsInList = new Set((items ?? []).map((it) => it.product_id));
   const suggestions = (replenishment ?? []).filter(
     (r) => r.product_id && !idsInList.has(r.product_id),
   );
+
+  // Nombres del hogar (Fase 32) -- para el badge "quién lo agregó" junto a
+  // cada producto (Fase 33). Mismo patrón que Reportes: profiles no tiene
+  // household_id propio, se filtra por los ids de household_members.
+  const { data: members } = await supabase
+    .from("profiles")
+    .select("id, display_name")
+    .in("id", (householdMembers ?? []).map((m) => m.user_id));
 
   return (
     <ShoppingListClient
@@ -80,6 +94,7 @@ export default async function ListaPage() {
       allProducts={products ?? []}
       categories={categories ?? []}
       suggestions={suggestions}
+      members={members ?? []}
     />
   );
 }

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { RestockChips } from "@/components/restock-chips";
-import { Button, IconButton, Input } from "@/components/ui";
+import { Badge, Button, IconButton, Input } from "@/components/ui";
 
 type Product = {
   id: string;
@@ -20,8 +20,11 @@ type ListItem = {
   quantity: number;
   checked: boolean;
   product_id: string;
+  added_by: string;
   products: Product | null;
 };
+
+type Member = { id: string; display_name: string };
 
 type Suggestion = {
   product_id: string | null;
@@ -39,6 +42,7 @@ export function ShoppingListClient({
   allProducts,
   categories,
   suggestions: initialSuggestions,
+  members,
 }: {
   householdId: string;
   listId: string;
@@ -47,6 +51,7 @@ export function ShoppingListClient({
   allProducts: Product[];
   categories: Category[];
   suggestions: Suggestion[];
+  members: Member[];
 }) {
   const supabase = useMemo(() => createClient(), []);
   const [items, setItems] = useState<ListItem[]>(initialItems);
@@ -73,7 +78,9 @@ export function ShoppingListClient({
     async function refetchItems() {
       const { data } = await supabase
         .from("shopping_list_items")
-        .select("id, quantity, checked, product_id, products(id, name, unit_label, category_id)")
+        .select(
+          "id, quantity, checked, product_id, added_by, products(id, name, unit_label, category_id)",
+        )
         .eq("list_id", listId);
       if (active && data) setItems(data as ListItem[]);
     }
@@ -100,6 +107,7 @@ export function ShoppingListClient({
             quantity: number;
             checked: boolean;
             product_id: string;
+            added_by: string;
           };
 
           if (payload.eventType === "UPDATE") {
@@ -134,6 +142,7 @@ export function ShoppingListClient({
                   quantity: row.quantity,
                   checked: row.checked,
                   product_id: row.product_id,
+                  added_by: row.added_by,
                   products: product ?? null,
                 },
               ];
@@ -168,6 +177,15 @@ export function ShoppingListClient({
     for (const c of categories) map.set(c.id, c);
     return map;
   }, [categories]);
+
+  // Badge "quién lo agregó" (Fase 33): solo la inicial, para ocupar poco
+  // espacio en una fila ya compacta -- el nombre completo ya se muestra en
+  // Reportes > Historial (Fase 32), acá alcanza con distinguir de un
+  // vistazo entre las 1-2 personas del hogar.
+  const initialByUser = useMemo(
+    () => new Map(members.map((m) => [m.id, m.display_name.charAt(0).toUpperCase()])),
+    [members],
+  );
 
   const grouped = useMemo(() => {
     const groups = new Map<string, { label: string; order: number; items: ListItem[] }>();
@@ -256,7 +274,9 @@ export function ShoppingListClient({
         product_id: product.id,
         added_by: userId,
       })
-      .select("id, quantity, checked, product_id, products(id, name, unit_label, category_id)")
+      .select(
+        "id, quantity, checked, product_id, added_by, products(id, name, unit_label, category_id)",
+      )
       .single();
     if (!error && data) {
       setItems((prev) =>
@@ -431,6 +451,18 @@ export function ShoppingListClient({
                 >
                   {item.products?.name ?? "Producto"}
                 </span>
+
+                {initialByUser.get(item.added_by) && (
+                  <Badge
+                    variant="neutral"
+                    className="shrink-0"
+                    aria-label={`Agregado por ${
+                      members.find((m) => m.id === item.added_by)?.display_name ?? ""
+                    }`}
+                  >
+                    {initialByUser.get(item.added_by)}
+                  </Badge>
+                )}
 
                 <div className="flex shrink-0 items-center gap-1 text-sm text-zinc-600 dark:text-zinc-400">
                   <IconButton onClick={() => changeQuantity(item, -1)} aria-label="Restar">
