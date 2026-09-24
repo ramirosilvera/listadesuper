@@ -103,6 +103,8 @@ export function StockClient({
   const [archiving, setArchiving] = useState<string | null>(null);
   const [bannerDismissed, setBannerDismissed] = useState(true);
   const [snoozingId, setSnoozingId] = useState<string | null>(null);
+  const [editingQuantityId, setEditingQuantityId] = useState<string | null>(null);
+  const [quantityDraft, setQuantityDraft] = useState("");
 
   useEffect(() => {
     try {
@@ -184,6 +186,17 @@ export function StockClient({
     return [...groups.values()].sort((a, b) => a.order - b.order);
   }, [filtered, categoryById]);
 
+  // Fase 36: el botón "−" se toca muy seguido, y en la enorme mayoría de
+  // los casos significa "lo usé" -- consumo real, no una corrección de
+  // conteo. Se etiqueta así (en vez de 'manual_adjust' para ambos signos,
+  // como antes) para que el motor de sugerencias pueda algún día separar
+  // consumo real de corrección de inventario sin perder la evidencia que
+  // ya tiene acumulada (Fase 35 sigue contando manual_adjust +
+  // consumption igual que antes -- separarlas de verdad en las
+  // estadísticas es un cambio a futuro, cuando haya evidencia nueva
+  // suficiente bajo el reason correcto). El "+" y la edición directa del
+  // número (commitQuantity) siguen siendo 'manual_adjust': sumar sin que
+  // medie una compra, o corregir un conteo que estaba mal, no es consumo.
   async function adjust(product: Product, delta: number) {
     const next = Math.max(0, product.quantity_on_hand + delta);
     const realDelta = next - product.quantity_on_hand;
@@ -197,13 +210,51 @@ export function StockClient({
       p_household_id: householdId,
       p_product_id: product.id,
       p_delta: realDelta,
-      p_reason: "manual_adjust",
+      p_reason: realDelta < 0 ? "consumption" : "manual_adjust",
     });
 
     // Sin esto, si el RPC fallaba (red, error del server) el cambio
     // optimista de arriba quedaba visualmente aplicado aunque el server
     // nunca lo haya guardado -- la pantalla mostraba un número que no
     // era real. Se deshace el cambio local para que vuelva a coincidir.
+    if (error) {
+      setProducts((prev) =>
+        prev.map((p) =>
+          p.id === product.id ? { ...p, quantity_on_hand: product.quantity_on_hand } : p,
+        ),
+      );
+    }
+  }
+
+  function startEditingQuantity(product: Product) {
+    setEditingQuantityId(product.id);
+    setQuantityDraft(String(product.quantity_on_hand));
+  }
+
+  // Corrección de conteo: a diferencia de adjust(), esto es "el número que
+  // ves está mal, este es el real" -- siempre 'manual_adjust', sin
+  // importar si el valor corregido es mayor o menor al anterior (mismo
+  // criterio que "Reemplaza el stock" en Comprar, Fase 26).
+  async function commitQuantity(product: Product) {
+    const raw = quantityDraft;
+    setEditingQuantityId(null);
+    const parsed = Number(raw);
+    if (raw.trim() === "" || isNaN(parsed) || parsed < 0) return;
+
+    const realDelta = parsed - product.quantity_on_hand;
+    if (realDelta === 0) return;
+
+    setProducts((prev) =>
+      prev.map((p) => (p.id === product.id ? { ...p, quantity_on_hand: parsed } : p)),
+    );
+
+    const { error } = await supabase.rpc("adjust_stock", {
+      p_household_id: householdId,
+      p_product_id: product.id,
+      p_delta: realDelta,
+      p_reason: "manual_adjust",
+    });
+
     if (error) {
       setProducts((prev) =>
         prev.map((p) =>
@@ -566,13 +617,35 @@ export function StockClient({
 
                 <div className="flex items-center justify-between gap-2 pl-[1.125rem]">
                   <div className="flex items-center gap-1.5 text-sm text-zinc-600 dark:text-zinc-400">
-                    <IconButton onClick={() => adjust(p, -1)} aria-label="Restar">
+                    <IconButton onClick={() => adjust(p, -1)} aria-label="Restar (lo usé)">
                       −
                     </IconButton>
-                    <span className="w-9 text-center tabular-nums">
-                      {p.quantity_on_hand}
-                      <span className="ml-0.5 text-xs text-zinc-400">{p.unit_label}</span>
-                    </span>
+                    {editingQuantityId === p.id ? (
+                      <input
+                        type="number"
+                        autoFocus
+                        min={0}
+                        inputMode="decimal"
+                        value={quantityDraft}
+                        onChange={(e) => setQuantityDraft(e.target.value)}
+                        onBlur={() => commitQuantity(p)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") e.currentTarget.blur();
+                          if (e.key === "Escape") setEditingQuantityId(null);
+                        }}
+                        className="h-7 w-12 rounded-md border border-zinc-300 bg-white px-1 text-center text-base tabular-nums dark:border-zinc-700 dark:bg-zinc-900"
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => startEditingQuantity(p)}
+                        aria-label={`Corregir la cantidad de ${p.name} (hoy figura ${p.quantity_on_hand})`}
+                        className="w-9 select-none text-center tabular-nums underline decoration-dotted decoration-zinc-300 dark:decoration-zinc-700"
+                      >
+                        {p.quantity_on_hand}
+                        <span className="ml-0.5 text-xs text-zinc-400">{p.unit_label}</span>
+                      </button>
+                    )}
                     <IconButton onClick={() => adjust(p, 1)} aria-label="Sumar">
                       +
                     </IconButton>
