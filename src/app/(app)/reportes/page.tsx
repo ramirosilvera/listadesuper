@@ -17,7 +17,7 @@ export default async function ReportesPage() {
     { data: replenishment },
     { data: purchases },
     { data: suggestions },
-    { data: householdMembers },
+    { data: members },
     { data: seen },
   ] = await Promise.all([
     supabase
@@ -53,7 +53,13 @@ export default async function ReportesPage() {
       .eq("household_id", household.id)
       .order("suggestion_type", { ascending: true })
       .order("name", { ascending: true }),
-    supabase.from("household_members").select("user_id").eq("household_id", household.id),
+    // Nombres de quienes integran el hogar (Fase 32) -- para mostrar "quién"
+    // registró cada compra en Historial y en el export JSON. Fase 37: antes
+    // se pedía primero household_members y recién después profiles filtrado
+    // por esos ids (dos etapas en serie). La policy RLS de profiles ya
+    // limita el resultado a uno mismo + convivientes, así que se pide en
+    // paralelo con el resto, sin depender de household_members.
+    supabase.from("profiles").select("id, display_name"),
     // Fase 34: qué sugerencias ya vio ESTA persona -- personal, no por
     // hogar (product_suggestion_dismissals ya cubre "el hogar decidió
     // ignorar esto"; esto es solo "yo ya lo miré").
@@ -63,16 +69,6 @@ export default async function ReportesPage() {
       .eq("household_id", household.id)
       .eq("user_id", user.id),
   ]);
-
-  // Nombres de quienes integran el hogar (Fase 32) -- para mostrar "quién"
-  // registró cada compra en Historial y en el export JSON, en vez de un id
-  // interno. profiles no tiene household_id propio (una persona pertenece a
-  // un solo hogar a la vez), así que se filtra por los ids de
-  // household_members en vez de poder pedirlo con un solo select anidado.
-  const { data: members } = await supabase
-    .from("profiles")
-    .select("id, display_name")
-    .in("id", (householdMembers ?? []).map((m) => m.user_id));
 
   const urgentExpirations = (expirationsUpcoming ?? []).filter(
     (e) => e.level === "expired" || e.level === "red",

@@ -27,8 +27,12 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  // No borrar: revalida el token en cada request.
-  await supabase.auth.getUser();
+  // No borrar: refresca el token si venció y deja las cookies al día.
+  // getClaims() (Fase 37) verifica la firma del JWT localmente en vez de
+  // pegarle al servidor de Auth en cada request -- y este proxy corre en
+  // TODAS las navegaciones y prefetches, así que era la ida y vuelta de red
+  // más repetida de la app.
+  await supabase.auth.getClaims();
 
   return supabaseResponse;
 }

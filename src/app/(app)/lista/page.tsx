@@ -37,22 +37,19 @@ export default async function ListaPage() {
   if (!household) redirect("/onboarding");
 
   const supabase = await createClient();
-  const listId = await getOrCreateActiveList(household.id);
 
+  // Fase 37: todo lo que no depende de la lista activa arranca YA, en
+  // paralelo con la búsqueda/creación de la lista (antes iba después, y los
+  // nombres del hogar iban en una tercera etapa). Solo los ítems necesitan
+  // el listId.
   const [
-    { data: items },
+    listId,
     { data: products },
     { data: categories },
     { data: replenishment },
-    { data: householdMembers },
+    { data: members },
   ] = await Promise.all([
-    supabase
-      .from("shopping_list_items")
-      .select(
-        "id, quantity, checked, product_id, added_by, products(id, name, unit_label, category_id)",
-      )
-      .eq("list_id", listId)
-      .order("created_at", { ascending: true }),
+    getOrCreateActiveList(household.id),
     supabase
       .from("products")
       .select("id, name, unit_label, category_id")
@@ -69,21 +66,23 @@ export default async function ListaPage() {
       .select("product_id, name, unit_label, restock_reason, days_since_last_restock")
       .eq("household_id", household.id)
       .eq("should_restock", true),
-    supabase.from("household_members").select("user_id").eq("household_id", household.id),
+    // Nombres del hogar (Fase 32) para el badge "quién lo agregó" (Fase 33).
+    // La policy RLS de profiles ya limita a uno mismo + convivientes.
+    supabase.from("profiles").select("id, display_name"),
   ]);
+
+  const { data: items } = await supabase
+    .from("shopping_list_items")
+    .select(
+      "id, quantity, checked, product_id, added_by, products(id, name, unit_label, category_id)",
+    )
+    .eq("list_id", listId)
+    .order("created_at", { ascending: true });
 
   const idsInList = new Set((items ?? []).map((it) => it.product_id));
   const suggestions = (replenishment ?? []).filter(
     (r) => r.product_id && !idsInList.has(r.product_id),
   );
-
-  // Nombres del hogar (Fase 32) -- para el badge "quién lo agregó" junto a
-  // cada producto (Fase 33). Mismo patrón que Reportes: profiles no tiene
-  // household_id propio, se filtra por los ids de household_members.
-  const { data: members } = await supabase
-    .from("profiles")
-    .select("id, display_name")
-    .in("id", (householdMembers ?? []).map((m) => m.user_id));
 
   return (
     <ShoppingListClient

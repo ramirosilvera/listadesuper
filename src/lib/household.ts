@@ -25,13 +25,18 @@ import { createClient } from "@/lib/supabase/server";
 export const getActiveHousehold = cache(async () => {
   const supabase = await createClient();
 
-  const [
-    {
-      data: { user },
-    },
-    { data: membership },
-  ] = await Promise.all([
-    supabase.auth.getUser(),
+  // Fase 37: getClaims() en vez de getUser(). getUser() es una ida y vuelta
+  // de red al servidor de Auth en CADA navegación; getClaims() verifica la
+  // firma del JWT localmente (con la clave pública JWKS, que se cachea) y
+  // solo cae a la red si el proyecto firmara con clave simétrica. El
+  // proxy (src/proxy.ts) ya refresca el token vencido antes de llegar acá, y
+  // RLS valida el JWT en cada consulta a la base, así que la identidad
+  // sigue siendo verificada criptográficamente. Lo único que se pierde es
+  // enterarse al instante de una sesión revocada desde el servidor
+  // (recién se nota cuando vence el token, ~1 h): aceptable para una lista
+  // de súper compartida de un hogar.
+  const [{ data: claimsData }, { data: membership }] = await Promise.all([
+    supabase.auth.getClaims(),
     supabase
       .from("my_membership")
       .select("household_id, role, household_name, household_invite_code")
@@ -39,7 +44,9 @@ export const getActiveHousehold = cache(async () => {
       .maybeSingle(),
   ]);
 
-  if (!user) return { user: null, household: null };
+  const claims = claimsData?.claims;
+  if (!claims?.sub) return { user: null, household: null };
+  const user = { id: claims.sub, email: claims.email };
 
   if (!membership) {
     return { user, household: null };

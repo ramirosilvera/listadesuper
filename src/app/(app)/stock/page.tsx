@@ -15,7 +15,6 @@ export default async function StockPage() {
     { data: stock },
     { data: categories },
     { data: expirations },
-    { data: realPurchases },
     { data: replenishment },
   ] = await Promise.all([
     supabase
@@ -41,18 +40,6 @@ export default async function StockPage() {
         "id, product_name, unit_label, expiration_date, quantity, days_until, level, purchase_item_id, confirmed_by_user",
       )
       .eq("household_id", household.id),
-    // Fase 20: "Última compra" solo debe mostrarse para una compra REAL
-    // (reason='purchase'), no para la carga inicial de Fase 6 -- mostrar
-    // "Última compra: 11/09" para algo que en realidad nunca se compró,
-    // solo se cargó como punto de partida, es engañoso (ver docs/plan.md,
-    // pedido de UX para que los datos de arranque se lean como estimados,
-    // no como hechos confirmados).
-    supabase
-      .from("stock_movements")
-      .select("product_id, created_at")
-      .eq("household_id", household.id)
-      .eq("reason", "purchase")
-      .order("created_at", { ascending: false }),
     // "Hace cuanto no lo comprás" (Fase 8, restock_cycle_days): se lee acá
     // en vez de recalcularlo en el cliente para no duplicar la lógica de
     // la vista product_replenishment. cycle_urgency (Fase 29) trae la
@@ -64,22 +51,13 @@ export default async function StockPage() {
     // la alerta).
     supabase
       .from("product_replenishment")
-      .select("product_id, restock_reason, cycle_urgency, restock_snoozed_until")
+      .select("product_id, restock_reason, cycle_urgency, restock_snoozed_until, last_restocked_at")
       .eq("household_id", household.id),
   ]);
 
   const stockByProduct = new Map(
     (stock ?? []).map((s) => [s.product_id, s.quantity_on_hand ?? 0]),
   );
-  // Ya viene ordenado desc, así que la primera ocurrencia de cada
-  // product_id es su compra real más reciente.
-  const lastRestockByProduct = new Map<string, string>();
-  for (const m of realPurchases ?? []) {
-    if (!lastRestockByProduct.has(m.product_id)) {
-      lastRestockByProduct.set(m.product_id, m.created_at);
-    }
-  }
-
   // cycle_urgency solo viaja para productos con motivo 'ciclo_de_compra':
   // 'vencido'/'esta_semana' son los mismos que antes disparaban should_restock
   // (ahora con margen), 'proxima_semana' es puramente informativo, no
@@ -92,14 +70,23 @@ export default async function StockPage() {
       .filter((r) => r.product_id)
       .map((r) => [
         r.product_id as string,
-        { cycle_urgency: r.cycle_urgency, restock_snoozed_until: r.restock_snoozed_until },
+        {
+          cycle_urgency: r.cycle_urgency,
+          restock_snoozed_until: r.restock_snoozed_until,
+          last_restocked_at: r.last_restocked_at,
+        },
       ]),
   );
 
   const rows = (products ?? []).map((p) => ({
     ...p,
     quantity_on_hand: stockByProduct.get(p.id) ?? 0,
-    last_restocked_at: lastRestockByProduct.get(p.id) ?? null,
+    // Fase 37: "Última compra" sale de la misma vista (max created_at con
+    // reason='purchase', o sea solo compras REALES, no la carga inicial --
+    // criterio de Fase 20) en vez de traer TODOS los movimientos de compra
+    // del hogar y recorrerlos acá: era una consulta sin tope que crece con
+    // el historial.
+    last_restocked_at: replenishmentByProduct.get(p.id)?.last_restocked_at ?? null,
     cycle_urgency: replenishmentByProduct.get(p.id)?.cycle_urgency ?? null,
     restock_snoozed_until: replenishmentByProduct.get(p.id)?.restock_snoozed_until ?? null,
   }));

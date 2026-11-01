@@ -10,13 +10,6 @@ export default async function ComprarPage() {
 
   const supabase = await createClient();
 
-  const { data: activeLists } = await supabase
-    .from("shopping_lists")
-    .select("id")
-    .eq("household_id", household.id)
-    .eq("status", "active");
-  const activeListIds = (activeLists ?? []).map((l) => l.id);
-
   const [
     { data: checkedItems },
     { data: products },
@@ -24,13 +17,18 @@ export default async function ComprarPage() {
     { data: replenishment },
     { data: categories },
   ] = await Promise.all([
-    activeListIds.length
-      ? supabase
-          .from("shopping_list_items")
-          .select("id, quantity, product_id, products(id, name, unit_label, default_shelf_life_days)")
-          .eq("checked", true)
-          .in("list_id", activeListIds)
-      : Promise.resolve({ data: [] as never[] }),
+    // Fase 37: antes eran dos etapas en serie (primero las listas activas,
+    // después los ítems tildados de esas listas). El join !inner filtra por
+    // la lista activa del hogar en la misma consulta -- mismo resultado,
+    // una ida y vuelta menos.
+    supabase
+      .from("shopping_list_items")
+      .select(
+        "id, quantity, product_id, products(id, name, unit_label, default_shelf_life_days), shopping_lists!inner(household_id, status)",
+      )
+      .eq("checked", true)
+      .eq("shopping_lists.household_id", household.id)
+      .eq("shopping_lists.status", "active"),
     supabase
       .from("products")
       .select("id, name, unit_label, default_shelf_life_days")

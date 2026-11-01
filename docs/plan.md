@@ -829,3 +829,18 @@ Pedido del usuario, con motivo concreto: hay productos del import inicial (Fase 
 - **Defensa en profundidad en el cliente**: aunque la UI ya filtra qué productos son elegibles, `deleteProduct()` igual revisa la respuesta real del `DELETE` (filas afectadas) en vez de asumir éxito — cubre el caso de que otra persona del hogar cargue una compra de ese mismo producto justo antes, en otra pestaña.
 
 **Verificado**: los 3 casos de la policy nueva se probaron dentro de transacciones con `rollback`, simulando RLS real (`set local role authenticated` + JWT del usuario real) sobre datos del hogar real: (1) producto archivado sin compras → se borra: 0 filas después del `DELETE`; (2) producto NO archivado → el `DELETE` no afecta ninguna fila; (3) producto archivado pero con una compra real (insertada dentro de la misma transacción de prueba, nunca persistida) → el `DELETE` tampoco afecta ninguna fila. El texto de las 4 policies en la base real (`pg_get_expr`) coincide carácter por carácter con la migración guardada. `mcp__Supabase__get_advisors` sin hallazgos de seguridad nuevos. `npm run build`/`npm run lint` limpios.
+
+---
+
+## Fases 36-37: menos sugerencias y menos idas y vueltas de red
+
+**Fase 36 (sugerencias):** los chips de reposición por ciclo bajaron de 30 a 9 (33 → 12 en total). El ciclo avisa recién al vencer y exige 2+ compras o stock ≤ 1; se recalibraron 3 ciclos con la mediana real. Ver `20261101120000_fase36_*.sql`.
+
+**Fase 37 (rendimiento).** Medido, no supuesto: las vistas del motor ejecutan en ~2-3 ms con 309 movimientos / 128 productos (`EXPLAIN ANALYZE`), así que el motor **no** es el cuello de botella. La lentitud es de red: etapas de pedidos en serie por navegación. Cambios:
+- `getActiveHousehold()` y el proxy usan `auth.getClaims()` (verificación local del JWT) en vez de `auth.getUser()` (ida y vuelta a Auth en cada navegación y prefetch). Pérdida conocida: una sesión revocada desde el servidor se nota recién al vencer el token (~1 h). Si el proyecto firmara con clave simétrica, `getClaims` cae solo a la red (sin regresión).
+- Etapas en serie por pantalla (incluyendo el proxy y la membresía), antes → ahora: Lista 5 → 3, Reportes 4 → 2, Comprar 4 → 2, Stock 3 → 2. Reportes y Lista piden `profiles` en paralelo (el RLS ya limita a uno mismo + convivientes); Comprar usa un join `!inner` en vez de pedir primero las listas activas.
+- Stock dejó de traer todos los movimientos de compra del hogar (consulta sin tope que crece con el historial): "última compra" sale de `product_replenishment.last_restocked_at`.
+- `vercel.json` fija la región `gru1` (São Paulo), junto a la base (`sa-east-1`). Sin esto Vercel usa por defecto EE.UU. y cada consulta a la base cruza el continente.
+- Migración `20261101130000_fase37_*.sql`: `(select auth.uid())` en 3 policies de RLS e índices de las 2 FK de `suggestion_seen`. Los índices "sin uso" del advisor no se tocan (tablas chicas → Seq Scan; importan cuando crezca el historial).
+
+**Limitación declarada:** no hay medición de tiempos reales de punta a punta (sin acceso a Vercel ni credenciales de usuario); los números de etapas son conteo de idas y vueltas, no milisegundos.
