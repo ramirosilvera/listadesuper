@@ -924,6 +924,31 @@ Pedido: "cuando se agregue un producto en la lista de súper, automáticamente d
 
 ---
 
+## Fase 45: auditoría de las Fases 43-44
+
+Auditoría de bugs, UI/UX, IA y seguridad sobre lo último construido, con evidencia en la base (migración `20261101230203_fase45_*.sql`).
+
+**Corregido**
+1. **Sugerencias de ciclo inertes para el caso típico.** De 11 productos contados en el Repaso, 7 tenían el ciclo cargado 2 a 5 veces fuera de lo medido (Coco rallado 14 vs ~66, Desodorante 28 vs ~66, Yerba mate 21 vs ~48, Algodón y Mermelada 14 vs "al menos 33") y **ninguno** generaba sugerencia: la regla pedía 2 muestras y con una sola compra no hay intervalos (53 de 75 productos con ciclo están en ese caso). Ahora una sola medición del Repaso alcanza si el ciclo cargado está a ≥ 2× (o ≤ la mitad). Resultado: sugerencias de ciclo 1 → 4 (Algodón y Mermelada no aparecen porque están pospuestos, filtro deliberado de la Fase 34).
+2. **Vencimientos de productos sin stock.** `product_expirations_upcoming` mostraba lotes activos de productos con stock 0 (9 casos; 0 urgentes hoy). La Fase 44 lo agravaba: agregar a la lista deja el stock en 0 pero los lotes seguían "por vencer". Ahora se ocultan los de productos sin stock (visibles 192, con stock 0: 0).
+3. **Seguridad.** `mark_suggestions_seen`, `snooze_restock` y `unsnooze_restock` eran ejecutables por el rol `anon`. No eran explotables (validan membresía con `auth.uid()`, null sin sesión) pero no había motivo para exponerlas: se revocó `anon`/`public` y se concedió solo a `authenticated`. El aviso del advisor desapareció.
+4. **Rendimiento.** Índice para la FK `stock_zero_movement_id` (aviso del advisor).
+
+**Verificado sin cambios**: sin stock negativo, sin `list_zero` huérfanos, sin ítems inconsistentes; sin errores de Postgres en 24 h; `product_replenishment` 9,5 ms y `product_suggestions` 13 ms con 335 movimientos. Pruebas de la Fase 44 repetidas **con tiempos explícitos** (las primeras compartían transacción y dependían del desempate por id): una compra o un ajuste posteriores no restituyen, y un movimiento anterior al cero no lo bloquea.
+
+**Hallazgos que NO se cambiaron (decisión del usuario o limitación)**
+- **Cobertura FIFO de vencimientos.** Ocultar los lotes que el stock ya no cubre esconde 52 de 198 lotes (4 urgentes) apoyándose en un stock poco confiable; se aplicó solo la versión conservadora (stock 0). Además, los lotes viejos de un producto con stock 0 reaparecen si luego se compra de nuevo.
+- **Empate de reloj.** Dos movimientos en la *misma* transacción comparten `created_at` y la restitución desempata por un id aleatorio (1 de 20 falló en esa prueba artificial). En el uso real cada acción es una transacción distinta, así que no ocurre.
+- **"Para reponer" en Reportes** cuenta los ítems de la lista (tienen stock 0 y cumplen "poco stock"): la cifra sube con el largo de la lista.
+- **13 funciones `SECURITY DEFINER` ejecutables por usuarios con sesión** (aviso del advisor): son las RPC de la app y todas validan membresía; solo `create_household` y `join_household_by_code` no la exigen, por diseño.
+- **Protección contra contraseñas filtradas desactivada** en Supabase Auth: es un ajuste del panel (Authentication › Passwords), no se puede cambiar desde acá.
+- **Abierto desde la Fase 41:** `StockClient` guarda su estado local, así que lo hecho con +/− se pierde al cambiar de pestaña y volver.
+- **401 en `my_membership` (abierto, sin atribuir).** 20 respuestas 401 en ~1 h, siempre de a pares, desde el servidor de Next (`node`), sin cabecera de autorización registrada; las pantallas con sesión responden 200 y no se vieron errores de Postgres. Causa probable: visitas sin sesión a páginas que llaman a `getActiveHousehold()` (bienvenida, `/join/[code]`); se probó y se **descartó** que fueran mis `next build` con clave falsa. Sin impacto visible; conviene mirar si reaparecen.
+- **Prueba en vivo de la Fase 39 (`getClaims`)**: antes de las 22:00 hubo ~70 llamadas a `/auth/v1/user` en 20 minutos; desde las 22:00, **cero**, y solo pedidos de claves públicas (`jwks.json`). Los refrescos de sesión (`/auth/v1/token`) respondieron todos 200.
+- **Sin verificar en navegador:** el flujo "quitar de la lista → el stock vuelve" de punta a punta (la herramienta de Supabase pide confirmación aparte para `DELETE`), la pantalla del Repaso y el aviso de Lista.
+
+---
+
 ## Equivalencias de numeración
 
 El historial ya tenía una Fase 36 (`21d7a2b`, separar consumo real de corrección de conteo) y una Fase 37 (`42eb726`, días desde la última compra en "queda poco stock"). El trabajo de esta sesión se había rotulado 36-40 por error y se renumeró a 38-43. Los **archivos de migración conservan el nombre con el que quedaron registrados en la base** (no se pueden renombrar sin desalinear el historial de migraciones):
@@ -936,4 +961,5 @@ El historial ya tenía una Fase 36 (`21d7a2b`, separar consumo real de correcci�
 | 41 | Auditoría: conteo atómico | `20261101221419_fase39_conteo_atomico.sql` |
 | 42 | Las respuestas del repaso alimentan las Sugerencias | `20261101222029_fase40_ciclos_desde_repaso.sql` |
 | 43 | Alinear los criterios del motor | `20261101223407_fase43_alinear_criterios.sql` |
+| 45 | Auditoría: seguridad, vencimientos y sugerencias de ciclo | `20261101230203_fase45_auditoria_seguridad_vencimientos_ciclos.sql` |
 | 44 | Al agregar a la lista, el stock pasa a 0 | `20261101224725_fase44_motivo_list_zero.sql`, `20261101225345_fase44_columnas_stock_cero_en_lista.sql`, `20261101225559_fase44_stock_cero_al_agregar_a_la_lista.sql` |
