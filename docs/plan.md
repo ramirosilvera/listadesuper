@@ -844,3 +844,15 @@ Pedido del usuario, con motivo concreto: hay productos del import inicial (Fase 
 - Migración `20261101130000_fase37_*.sql`: `(select auth.uid())` en 3 policies de RLS e índices de las 2 FK de `suggestion_seen`. Los índices "sin uso" del advisor no se tocan (tablas chicas → Seq Scan; importan cuando crezca el historial).
 
 **Limitación declarada:** no hay medición de tiempos reales de punta a punta (sin acceso a Vercel ni credenciales de usuario); los números de etapas son conteo de idas y vueltas, no milisegundos.
+
+---
+
+## Fase 38: relevamiento asistido de stock ("Repaso")
+
+Pedido: el stock figura inflado porque se compra mucho y casi no se carga el consumo (127 compras vs 15 consumos en 6 semanas); se pidió un motor que resetee o ayude a relevar. **Decisión (Consejo, con el usuario)**: NO resetear solo (misma razón que la fase de "ciclo vencido": fabricaría una cantidad que nadie vio); en cambio la app detecta qué stock es dudoso y se lo hace confirmar en un repaso de ~1 minuto. Respuestas del usuario: estimar y confirmar (sin tocar el stock real hasta confirmar), mínimo = 0, pantalla de repaso rápido, y que lo estimado NO genere sugeridos (solo lo confirmado como "no queda").
+
+- **Base** (`20261101140000_fase38_*.sql`): motivo `count` en `stock_movements` y en `adjust_stock`; vista `product_stock_review` (`needs_review`: stock > 0 y pasó el ciclo efectivo sin compra ni conteo; ciclo efectivo = mediana real de compras si hay 3+ intervalos de ≥ 1 día en 180 días, si no el declarado; ancla = última compra/conteo, o la carga inicial).
+- **Consumo solo `reason='consumption'`** en `product_replenishment` y `product_suggestions` (antes contaba cualquier baja que no fuera compra, incluidas correcciones y descartes). **Costo conocido**: se pierde la evidencia de las 33 bajas `manual_adjust` previas al 25/9 (el "−" aún no se etiquetaba como consumo); productos con consumo estimado 8 → 1, vuelve a juntarse con el uso.
+- **App**: pestaña "Repaso" en Stock (badge con cuántos faltan, tope de 15 por tanda, más vencidos primero). Botones: **Queda** (delta 0, solo reinicia el reloj), **Poco** (mitad, si hay ≥ 2), **No queda** (0), **Contar** (cantidad exacta), y **Deshacer** de la última acción con cantidad. Todo con `reason='count'`.
+- **Medido el día de la implementación**: 24 productos a revisar (más que los 11 estimados al proponer porque ahora cuentan también los nunca comprados desde la carga inicial). Probado en transacción con `rollback`, con rol y JWT reales: confirmar saca al producto de la lista, "No queda"/"Poco" lo pasan a sugerido, los conteos no tocan la estimación de consumo.
+- **Limitaciones declaradas**: (1) "Deshacer" restituye la cantidad pero el producto queda confirmado hoy (no reaparece hasta el próximo ciclo). (2) Confirmar "Queda" con 1 unidad y el ciclo de compra vencido lo hace sugerido (regla de la Fase 36: stock ≤ 1). (3) Preexistente, no tocado: `StockClient` guarda su estado local, así que ediciones hechas con +/− se pierden al cambiar de pestaña y volver (el repaso sí se conserva).

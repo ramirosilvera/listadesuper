@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getActiveHousehold } from "@/lib/household";
 import { createClient } from "@/lib/supabase/server";
+import { REVIEW_BATCH, toReviewItems } from "@/lib/stock-review";
 import { StockTabs } from "./stock-tabs";
 
 export default async function StockPage() {
@@ -16,6 +17,7 @@ export default async function StockPage() {
     { data: categories },
     { data: expirations },
     { data: replenishment },
+    { data: review, count: reviewCount },
   ] = await Promise.all([
     supabase
       .from("products")
@@ -53,6 +55,20 @@ export default async function StockPage() {
       .from("product_replenishment")
       .select("product_id, restock_reason, cycle_urgency, restock_snoozed_until, last_restocked_at")
       .eq("household_id", household.id),
+    // Fase 38: productos con el stock sin confirmar hace más de un ciclo
+    // (vista product_stock_review). Va en la misma etapa que el resto, así
+    // no suma una ida y vuelta de red; los más vencidos primero y con tope
+    // para que el repaso no abrume.
+    supabase
+      .from("product_stock_review")
+      .select(
+        "product_id, name, unit_label, quantity_on_hand, effective_cycle_days, cycle_source, days_since_confirmed",
+        { count: "exact" },
+      )
+      .eq("household_id", household.id)
+      .eq("needs_review", true)
+      .order("overdue_ratio", { ascending: false })
+      .limit(REVIEW_BATCH),
   ]);
 
   const stockByProduct = new Map(
@@ -105,6 +121,8 @@ export default async function StockPage() {
       products={rows}
       categories={categories ?? []}
       initialExpirations={expirationRows}
+      reviewItems={toReviewItems(review)}
+      reviewTotal={reviewCount ?? 0}
     />
   );
 }

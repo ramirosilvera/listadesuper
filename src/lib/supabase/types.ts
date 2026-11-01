@@ -815,6 +815,31 @@ export type Database = {
           },
         ]
       }
+      product_stock_review: {
+        Row: {
+          anchor_at: string | null
+          cycle_source: string | null
+          days_since_confirmed: number | null
+          effective_cycle_days: number | null
+          household_id: string | null
+          name: string | null
+          needs_review: boolean | null
+          overdue_ratio: number | null
+          product_id: string | null
+          quantity_on_hand: number | null
+          restock_cycle_days: number | null
+          unit_label: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "households"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_suggestions: {
         Row: {
           current_value: number | null

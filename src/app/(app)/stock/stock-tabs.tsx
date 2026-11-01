@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { Badge, SegmentedControl } from "@/components/ui";
 import { StockClient } from "./stock-client";
+import { RepasoTab } from "./repaso-tab";
+import type { ReviewItem } from "@/lib/stock-review";
 import { VencimientosTab } from "./vencimientos-tab";
 
 type Product = {
@@ -38,13 +40,22 @@ export function StockTabs({
   products,
   categories,
   initialExpirations,
+  reviewItems,
+  reviewTotal,
 }: {
   householdId: string;
   products: Product[];
   categories: Category[];
   initialExpirations: Expiration[];
+  reviewItems: ReviewItem[];
+  reviewTotal: number;
 }) {
-  const [tab, setTab] = useState<"stock" | "vencimientos">("stock");
+  const [tab, setTab] = useState<"stock" | "repaso" | "vencimientos">("stock");
+  // Fase 38: el repaso corrige cantidades; la pestaña Stock se vuelve a
+  // montar al volver (render condicional) y lee de acá, así ve el número
+  // confirmado en vez del que vino del servidor al cargar la página.
+  const [liveProducts, setLiveProducts] = useState(products);
+  const [pendingReview, setPendingReview] = useState(reviewTotal);
   // El número de esta solapa mostraba el total (hoy, 106 en el hogar
   // real -- casi todos vencimientos estimados a meses o años, ver Fase
   // "filtros en Vencimientos"). Mostrar ese número grande antes incluso
@@ -65,6 +76,16 @@ export function StockTabs({
         options={[
           { value: "stock", label: "Stock" },
           {
+            value: "repaso",
+            label: "Repaso",
+            badge:
+              pendingReview > 0 ? (
+                <Badge variant="warning" className="ml-0.5">
+                  {pendingReview}
+                </Badge>
+              ) : undefined,
+          },
+          {
             value: "vencimientos",
             label: "Vencimientos",
             badge:
@@ -78,7 +99,19 @@ export function StockTabs({
       />
 
       {tab === "stock" ? (
-        <StockClient householdId={householdId} products={products} categories={categories} />
+        <StockClient householdId={householdId} products={liveProducts} categories={categories} />
+      ) : tab === "repaso" ? (
+        <RepasoTab
+          householdId={householdId}
+          initialItems={reviewItems}
+          initialTotal={reviewTotal}
+          onTotalChange={setPendingReview}
+          onApplied={(productId, quantity) =>
+            setLiveProducts((prev) =>
+              prev.map((p) => (p.id === productId ? { ...p, quantity_on_hand: quantity } : p)),
+            )
+          }
+        />
       ) : (
         <VencimientosTab initialExpirations={initialExpirations} />
       )}
