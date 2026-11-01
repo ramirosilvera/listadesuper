@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { RestockChips } from "@/components/restock-chips";
@@ -57,6 +57,23 @@ export function ShoppingListClient({
   const [items, setItems] = useState<ListItem[]>(initialItems);
   const [products, setProducts] = useState<Product[]>(allProducts);
   const [suggestions, setSuggestions] = useState(initialSuggestions);
+  // Fase 44: al agregar un producto, la base le deja el stock en 0 (para no
+  // cargarlo dos veces). Se avisa qué pasó para que no sea un cambio silencioso.
+  const [stockNotice, setStockNotice] = useState<string | null>(null);
+  const stockNoticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function showStockNotice(message: string) {
+    setStockNotice(message);
+    if (stockNoticeTimer.current) clearTimeout(stockNoticeTimer.current);
+    stockNoticeTimer.current = setTimeout(() => setStockNotice(null), 7000);
+  }
+
+  useEffect(
+    () => () => {
+      if (stockNoticeTimer.current) clearTimeout(stockNoticeTimer.current);
+    },
+    [],
+  );
   const [query, setQuery] = useState("");
   const [adding, setAdding] = useState(false);
   const [newProductCategoryId, setNewProductCategoryId] = useState("");
@@ -275,7 +292,7 @@ export function ShoppingListClient({
         added_by: userId,
       })
       .select(
-        "id, quantity, checked, product_id, added_by, products(id, name, unit_label, category_id)",
+        "id, quantity, checked, product_id, added_by, stock_zeroed_qty, products(id, name, unit_label, category_id)",
       )
       .single();
     if (!error && data) {
@@ -283,6 +300,14 @@ export function ShoppingListClient({
         prev.some((it) => it.id === data.id) ? prev : [...prev, data as ListItem],
       );
       setSuggestions((prev) => prev.filter((s) => s.product_id !== product.id));
+      const zeroed = Number(data.stock_zeroed_qty ?? 0);
+      if (zeroed > 0) {
+        showStockNotice(
+          `Stock de «${product.name}» puesto en 0 (figuraba ${
+            Number.isInteger(zeroed) ? zeroed : Math.round(zeroed * 100) / 100
+          }). Si lo quitás de la lista sin comprarlo, vuelve a como estaba.`,
+        );
+      }
     }
   }
 
@@ -393,6 +418,15 @@ export function ShoppingListClient({
           </div>
         )}
       </form>
+
+      {stockNotice && (
+        <p
+          role="status"
+          className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+        >
+          {stockNotice}
+        </p>
+      )}
 
       <RestockChips
         title="Se están por acabar"

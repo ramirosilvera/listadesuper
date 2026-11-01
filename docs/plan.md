@@ -906,6 +906,24 @@ Se pidió alinear y corregir según criterio los cinco hallazgos que dejó la au
 
 ---
 
+## Fase 44: al agregar un producto a la lista, su stock pasa a 0
+
+Pedido: "cuando se agregue un producto en la lista de súper, automáticamente dejarlo sin stock, así no lo cargamos dos veces".
+
+**Cómo se hizo.** Un trigger `BEFORE INSERT` en `shopping_list_items` escribe un movimiento `list_zero` por −(stock actual) y guarda en el ítem cuánto había (`stock_zeroed_qty`) y qué movimiento fue (`stock_zero_movement_id`). Si el stock ya era 0 no registra nada. Es server-side a propósito: Lista es el único lugar que inserta en esa tabla (el formulario de Comprar solo arma filas locales), pero así cubre buscador, producto nuevo y chips con un único punto de verdad, y es atómico. Bloquea la fila del producto para no pisarse con un conteo simultáneo (`set_stock_count`).
+
+**Salvaguarda (decisión mía, por criterio).** Agregar a la lista no siempre significa "se acabó": puede quedar algo en casa. Un trigger `AFTER DELETE` restituye lo que había si el ítem se quita **sin comprarse** y nadie tocó el stock después. `record_purchase` inserta su movimiento *antes* de borrar el ítem de la lista, así que una compra cuenta como "información más nueva" y no restituye; igual un conteo o un ajuste posterior. Es idempotente (la restitución es a su vez un movimiento posterior). Si el producto se borra en cascada, no hace nada.
+
+**Qué no cuenta.** `list_zero` no es consumo (`is_consumption_event`), ni confirmación del Repaso (ancla = compra o conteo), ni medición de ciclo (ventanas = conteos).
+
+**Consecuencias cubiertas.** (1) En Comprar, cada ítem de la lista (stock 0) cumpliría "poco stock" y aparecería también como sugerido: ahora los sugeridos excluyen todo lo que está en la lista, tildado o no. (2) El panel de Sugerencias propondría "archivar" un producto que lleva meses sin comprarse y que acabás de agregar a la lista: ahora lo excluye mientras esté en la lista. (3) Lista muestra por 7 segundos "Stock de «X» puesto en 0 (figuraba N). Si lo quitás de la lista sin comprarlo, vuelve a como estaba", para que no sea un cambio silencioso.
+
+**Probado** (transacción con `rollback`, sin `DELETE`: la herramienta de Supabase pide una confirmación aparte para las instrucciones destructivas y esa confirmación no llegó, así que la lógica de restituir vive en funciones auxiliares ejercitadas con `SELECT`): alta con el rol real del hogar (Shampoo 2 → 0, guarda 2); restituye (→ 2); una segunda llamada no duplica; tras una compra no restituye; si ya estaba en 0 no registra nada; tras un ajuste manual no restituye; el alta duplicada se rechaza sin dejar movimientos huérfanos; `list_zero` no cuenta como consumo. Verificados en la base los dos triggers activos.
+
+**Limitaciones**: (a) el cableado `DELETE → restituir` no se probó de punta a punta (solo sus piezas): conviene probarlo a mano en la app (agregar un producto con stock, quitarlo sin comprar, mirar que el stock vuelva). (b) Los ítems que ya estaban en la lista al aplicar el cambio no se tocaron. (c) Si el stock real era 0 pero la app creía 2, agregar y quitar sin comprar "restituye" un 2 que era falso: se vuelve al estado previo, no a la verdad. (d) Un producto con stock agregado a la lista cuando todavía quedaba algo en casa queda por debajo de lo real hasta que se compre o se corrija.
+
+---
+
 ## Equivalencias de numeración
 
 El historial ya tenía una Fase 36 (`21d7a2b`, separar consumo real de corrección de conteo) y una Fase 37 (`42eb726`, días desde la última compra en "queda poco stock"). El trabajo de esta sesión se había rotulado 36-40 por error y se renumeró a 38-43. Los **archivos de migración conservan el nombre con el que quedaron registrados en la base** (no se pueden renombrar sin desalinear el historial de migraciones):
@@ -918,3 +936,4 @@ El historial ya tenía una Fase 36 (`21d7a2b`, separar consumo real de correcci�
 | 41 | Auditoría: conteo atómico | `20261101221419_fase39_conteo_atomico.sql` |
 | 42 | Las respuestas del repaso alimentan las Sugerencias | `20261101222029_fase40_ciclos_desde_repaso.sql` |
 | 43 | Alinear los criterios del motor | `20261101223407_fase43_alinear_criterios.sql` |
+| 44 | Al agregar a la lista, el stock pasa a 0 | `20261101224725_fase44_motivo_list_zero.sql`, `20261101225345_fase44_columnas_stock_cero_en_lista.sql`, `20261101225559_fase44_stock_cero_al_agregar_a_la_lista.sql` |

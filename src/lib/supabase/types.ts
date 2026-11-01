@@ -435,6 +435,8 @@ export type Database = {
           list_id: string
           product_id: string
           quantity: number
+          stock_zero_movement_id: string | null
+          stock_zeroed_qty: number | null
         }
         Insert: {
           added_by: string
@@ -446,6 +448,8 @@ export type Database = {
           list_id: string
           product_id: string
           quantity?: number
+          stock_zero_movement_id?: string | null
+          stock_zeroed_qty?: number | null
         }
         Update: {
           added_by?: string
@@ -457,6 +461,8 @@ export type Database = {
           list_id?: string
           product_id?: string
           quantity?: number
+          stock_zero_movement_id?: string | null
+          stock_zeroed_qty?: number | null
         }
         Relationships: [
           {

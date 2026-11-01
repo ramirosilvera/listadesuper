@@ -11,7 +11,7 @@ export default async function ComprarPage() {
   const supabase = await createClient();
 
   const [
-    { data: checkedItems },
+    { data: listItems },
     { data: products },
     { data: stores },
     { data: replenishment },
@@ -24,9 +24,8 @@ export default async function ComprarPage() {
     supabase
       .from("shopping_list_items")
       .select(
-        "id, quantity, product_id, products(id, name, unit_label, default_shelf_life_days), shopping_lists!inner(household_id, status)",
+        "id, quantity, checked, product_id, products(id, name, unit_label, default_shelf_life_days), shopping_lists!inner(household_id, status)",
       )
-      .eq("checked", true)
       .eq("shopping_lists.household_id", household.id)
       .eq("shopping_lists.status", "active"),
     supabase
@@ -52,15 +51,21 @@ export default async function ComprarPage() {
       .order("sort_order", { ascending: true }),
   ]);
 
-  const idsAlreadyIn = new Set((checkedItems ?? []).map((it) => it.product_id));
+  // Las filas de la compra son los ítems TILDADOS de la lista. Para los
+  // sugeridos se excluye TODO lo que está en la lista, tildado o no (Fase 44):
+  // al agregar un producto a la lista su stock pasa a 0, o sea que cada ítem
+  // de la lista cumpliría "poco stock" y aparecería también como sugerido,
+  // duplicando lo que ya está a la vista.
+  const checkedItems = (listItems ?? []).filter((it) => it.checked);
+  const idsOnList = new Set((listItems ?? []).map((it) => it.product_id));
   const suggestions = (replenishment ?? []).filter(
-    (r) => r.product_id && !idsAlreadyIn.has(r.product_id),
+    (r) => r.product_id && !idsOnList.has(r.product_id),
   );
 
   return (
     <ComprarClient
       householdId={household.id}
-      initialItems={checkedItems ?? []}
+      initialItems={checkedItems}
       allProducts={products ?? []}
       stores={stores ?? []}
       categories={categories ?? []}
