@@ -955,19 +955,22 @@ La app es una lista de súper de uso privado (un hogar, sin datos sensibles). De
 
 ---
 
-## Fase 46: Vencimientos pasa a ser opt-in por producto (en curso)
+## Fase 46: Vencimientos pasa a ser opt-in por producto
 
 Pedido: eliminar Vencimientos o dejarlo mínimo con una casilla por producto, más un primer relevamiento y limpieza. **Decisión: mínimo y opt-in, no eliminarlo.** Medido: de 233 vencimientos, 1 activo estaba confirmado por una persona; los otros 216 eran estimaciones automáticas (compra + vida útil por defecto) que le asignaban "vence" a papel higiénico, bolsas de basura o lavandina. El módulo sí sirve para lo que se olvida en la alacena (enlatados, salsas, untables).
 
-**Hecho y desplegado** (compatible con el estado actual de la base)
-- Columna `products.track_expiration` (default false) — parte A, aplicada (`20261101231656_fase46_a_*`).
-- Stock: casilla **"Controlar vencimiento"** en los ajustes de cada producto.
-- Comprar: la fecha de vencimiento solo se precarga en productos controlados; en el resto el campo queda vacío y opcional.
-- Pestaña Vencimientos: el mensaje vacío explica cómo activar el control.
+**Qué quedó**
+- `products.track_expiration` (default false) y la casilla **"Controlar vencimiento"** en los ajustes de cada producto en Stock.
+- Comprar solo precarga la fecha en productos controlados; una fecha escrita a mano en otro producto lo activa solo.
+- La pestaña Vencimientos y el tile "Vencen pronto" solo cuentan productos controlados y con stock.
+- **Primer relevamiento** (22 productos): atún, choclo en lata, extracto de tomate, aceituna, aceto balsámico, salsa de barbacoa, ketchup, mayonesa, salsa de soja, dulce de leche, mermelada, pasta de maní, maní, coco rallado, harina leudante, polvo de hornear, aceite de oliva premium, té, crema de leche, leche larga vida, fritolín y esponja de cocina (único vencimiento confirmado a mano).
+- **Limpieza**: 184 lotes de productos no controlados → `untracked` (no se borró nada; reversible), 11 lotes de controlados que el stock ya no cubre → `consumed`. Resultado: 192 vencimientos visibles → **21** (de 22 productos). Todas esas fechas siguen siendo **estimadas** (fecha de la carga inicial + vida útil): hay que confirmarlas mirando el envase.
 
-**Pendiente de aplicar en la base** (`20261102040000_fase46_b_*`, marcado "no aplicada"): Supabase pidió una confirmación que no llegó al reemplazar `record_purchase`. Contenido: estado `untracked` (no se reutiliza `discarded`, que además descuenta stock), el primer relevamiento (22 productos de baja rotación: atún, choclo en lata, extracto de tomate, aceituna, aceto balsámico, salsa de barbacoa, ketchup, mayonesa, salsa de soja, dulce de leche, mermelada, pasta de maní, maní, coco rallado, harina leudante, polvo de hornear, aceite de oliva premium, té, crema de leche, leche larga vida, fritolín y esponja de cocina, que es el único vencimiento confirmado a mano), la limpieza (lotes de productos no controlados → `untracked`; en los controlados, lotes que el stock ya no cubre → `consumed`), la vista filtrada por `track_expiration`, `seed_initial_stock` y `record_purchase` (crear vencimiento solo si el producto está controlado o si se escribió una fecha a mano, que además lo activa).
+**Cómo se resolvió sin tocar `record_purchase`**: un trigger `BEFORE INSERT` sobre `product_expirations` (`private.product_expiration_opt_in`) descarta la estimación automática de productos no controlados (la fecha igual a compra + vida útil por defecto) y activa el control si la fecha es distinta (escrita a mano). Cubre `record_purchase` y `seed_initial_stock` sin reescribirlas. Se había intentado reemplazar `record_purchase` y la herramienta de Supabase pidió una confirmación que no llegó; el trigger es además una solución más segura (no toca la función más delicada de la app).
 
-**Estado intermedio mientras tanto**: la vista sigue mostrando los vencimientos existentes y `record_purchase` sigue creando uno por defecto para productos con vida útil; la casilla ya guarda y Comprar ya no precarga fechas en productos sin controlar.
+**Probado** (transacción con rollback, rol del hogar): comprar un producto no controlado sin fecha no crea vencimiento; con fecha escrita a mano lo crea y activa el control; un producto controlado sin fecha lo crea desde su vida útil (180 días para la mermelada); la carga inicial de un producto no controlado no genera lote.
+
+**Limitaciones**: si alguien escribe a mano exactamente la fecha estimada en un producto no controlado, se ignora. "Esponja de cocina" figura vencida (hace 11 días): es el único lote confirmado a mano, se respetó.
 
 ---
 
@@ -983,6 +986,6 @@ El historial ya tenía una Fase 36 (`21d7a2b`, separar consumo real de correcci�
 | 41 | Auditoría: conteo atómico | `20261101221419_fase39_conteo_atomico.sql` |
 | 42 | Las respuestas del repaso alimentan las Sugerencias | `20261101222029_fase40_ciclos_desde_repaso.sql` |
 | 43 | Alinear los criterios del motor | `20261101223407_fase43_alinear_criterios.sql` |
-| 46 | Vencimientos opt-in (en curso) | `20261101231656_fase46_a_columna_track_expiration.sql`; pendiente `20261102040000_fase46_b_vencimientos_opt_in_pendiente.sql` |
+| 46 | Vencimientos opt-in | `20261101231656_fase46_a_*` y `20261101232330` a `20261101232408_fase46_b1_*` … `b6_*` |
 | 45 | Auditoría: seguridad, vencimientos y sugerencias de ciclo | `20261101230203_fase45_auditoria_seguridad_vencimientos_ciclos.sql` |
 | 44 | Al agregar a la lista, el stock pasa a 0 | `20261101224725_fase44_motivo_list_zero.sql`, `20261101225345_fase44_columnas_stock_cero_en_lista.sql`, `20261101225559_fase44_stock_cero_al_agregar_a_la_lista.sql` |
