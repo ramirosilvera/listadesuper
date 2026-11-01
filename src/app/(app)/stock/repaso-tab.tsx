@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button, Card, Input } from "@/components/ui";
@@ -82,6 +83,7 @@ export function RepasoTab({
   // debe borrar la posibilidad de deshacer un "No queda" anterior.
   const [undoStack, setUndoStack] = useState<UndoEntry[]>([]);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [answered, setAnswered] = useState(0);
 
   // El contador del padre se sincroniza desde acá. Se actualiza con
   // funciones (no con el valor capturado) para que dos toques seguidos
@@ -113,6 +115,7 @@ export function RepasoTab({
 
     setItems((prev) => prev.filter((i) => i.product_id !== item.product_id));
     setTotal((t) => Math.max(0, t - 1));
+    setAnswered((n) => n + 1);
     onApplied(item.product_id, result.new_quantity);
     // Solo se puede deshacer lo que cambió una cantidad; "Queda" (delta 0)
     // apenas reinicia el reloj.
@@ -136,6 +139,7 @@ export function RepasoTab({
       return;
     }
     setUndoStack((prev) => prev.slice(0, -1));
+    setAnswered((n) => Math.max(0, n - 1));
     setItems((prev) => [entry.item, ...prev.filter((i) => i.product_id !== entry.item.product_id)]);
     setTotal((t) => t + 1);
     onApplied(entry.item.product_id, entry.item.quantity_on_hand);
@@ -282,6 +286,19 @@ export function RepasoTab({
         <Button variant="secondary" onClick={loadMore} disabled={loadingMore}>
           {loadingMore ? "Cargando…" : `Revisar los ${total} que faltan`}
         </Button>
+      )}
+
+      {/* Fase 40: lo que respondés acá no se pierde -- el módulo de
+          Sugerencias lo usa para proponer alargar o acortar ciclos. */}
+      {answered > 0 && (
+        <p className="px-1 text-xs text-zinc-500 dark:text-zinc-400">
+          Tus respuestas ayudan a calibrar los ciclos de compra: si detectamos que alguno
+          está desactualizado, te lo proponemos en{" "}
+          <Link href="/reportes" className="underline">
+            Reportes › Sugerencias
+          </Link>
+          .
+        </p>
       )}
     </div>
   );

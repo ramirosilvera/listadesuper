@@ -43,6 +43,8 @@ const GROUP_META: Record<
 // vista product_suggestions), no un modelo entrenado: con el volumen de
 // datos de un solo hogar un modelo real sobreajustaría, y acá lo que
 // importa es que cada sugerencia se pueda justificar en una frase.
+// Fase 40: los ciclos también se infieren de las respuestas del Repaso de
+// Stock (Stock > Repaso), no solo de los intervalos entre compras.
 export function SuggestionsPanel({
   suggestions: initial,
 }: {
@@ -114,9 +116,9 @@ export function SuggestionsPanel({
   if (suggestions.length === 0) {
     return (
       <p className="py-12 text-center text-sm text-zinc-500">
-        Sin sugerencias por ahora. A medida que se acumulen más compras y
-        consumos reales, van a aparecer acá ideas para ajustar ciclos,
-        umbrales o archivar productos que dejaron de usarse.
+        Sin sugerencias por ahora. A medida que se acumulen más compras,
+        consumos y repasos de stock, van a aparecer acá ideas para ajustar
+        ciclos, umbrales o archivar productos que dejaron de usarse.
       </p>
     );
   }

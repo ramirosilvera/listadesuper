@@ -873,3 +873,17 @@ Nota de numeración: el repo ya tenía una "Fase 36" (`21d7a2b`, separar consumo
 3. El orden del repaso por "veces vencido" pone primero a los nunca comprados con ciclo corto (ej. Capelettis, 7 días, 7,2×).
 4. Con consumo solo `consumption`, la predicción "se está por acabar" quedó casi apagada (1 producto) hasta juntar uso.
 5. Sin tests automáticos en el repo; el flujo completo del repaso y las consultas nuevas de Comprar no se verificaron en un navegador con sesión real.
+
+---
+
+## Fase 40: las respuestas del Repaso alimentan el módulo de Sugerencias
+
+Pedido: que la app proponga alargar o acortar ciclos a partir de las respuestas del repaso, **revisando antes el módulo de Sugerencias que ya hace esa función para integrarlo**. Revisión: `product_suggestions` → panel en Reportes → `apply/dismiss_product_suggestion` → aviso de "sin leer" ya implementan "proponer un cambio de ciclo"; lo único que faltaba era la **evidencia** (solo intervalos entre compras, con 3 intervalos mínimos). Medido: 11 de 75 productos con ciclo llegan a 4 compras; los otros 64 nunca podrían recibir una sugerencia. Se integró en la misma vista (tipo `ciclo_de_compra`), sin tabla, RPC ni pantalla nuevas.
+
+**Cómo se mide el ciclo con un conteo** (ventana = última compra → conteo; la carga inicial no cuenta, su cantidad es una estimación): quedaba menos que al comprar → consumo lineal, `ciclo = d × q_inicio / (q_inicio − q_fin)`; se acabó → `ciclo = d` (solo si `d ≤ 1.5 ×` el ciclo cargado); no se consumió nada ("Queda") → **cota inferior**: `ciclo ≥ d`. Una muestra por ventana; si la ventana tiene conteo, reemplaza al intervalo de compras de esa ventana (no se cuenta dos veces). Umbral: 3 muestras como antes, o 2 si al menos una es un repaso.
+
+**Bug encontrado y corregido en la prueba antes de aplicar**: tratar el "Queda" como una muestra más de la mediana hacía que Muzzarella (ciclo 60, "Queda" a los 19 días) recibiera la sugerencia de *acortar* a 25, cuando "todavía quedaba" solo prueba que el ciclo dura **al menos** 19. Ahora las cotas inferiores solo pueden alargar: `sugerido = max(mediana de muestras exactas, mayor cota)`, y una cota que no supera la mediana no cuenta como evidencia.
+
+**Verificado** (transacción con `rollback` sobre productos reales): Masa para empanadas 14 → 9 (2 ciclos de compra + 1 repaso); Nuggets 7 → "al menos 19" ("Queda" a los 19 días); Muzzarella y Mermelada sin sugerencia; Queso cremoso (se acabó a los 19, ciclo 21) sin sugerencia por diferencia chica; las sugerencias de hoy y los otros tipos quedaron idénticos. UI: el aviso del Repaso enlaza a Reportes › Sugerencias; el texto vacío del panel menciona los repasos.
+
+**Limitaciones**: (1) "Deshacer" un conteo hace que el último conteo de la ventana sea la reversión (cuenta como "no se consumió"). (2) Sin repasos hechos todavía (0 conteos en producción), no hay evidencia real de cómo se comporta con tus respuestas. (3) Al aceptar una sugerencia, el ciclo declarado converge con el aprendido que usa el Repaso (hallazgo 2 de la Fase 39).
