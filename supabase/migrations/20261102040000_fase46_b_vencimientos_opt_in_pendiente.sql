@@ -1,6 +1,10 @@
--- ESTADO: NO APLICADA a la base (Supabase pidio una confirmacion que no llego).
--- No hay codigo de la app que dependa de ella todavia. Al aplicarla, renombrar este
--- archivo con la version que registre la base y quitar este aviso.
+-- ESTADO: PARTE B-D NO APLICADA a la base. Supabase pidio una confirmacion (al
+-- reemplazar record_purchase) que no llego. La parte A (columna) ya esta aplicada
+-- y la app ya la usa. Pendiente, en este orden: (1) constraint + estado
+-- 'untracked', (2) relevamiento + limpieza de datos, (3) vista, (4) seed_initial_stock
+-- y record_purchase. Hasta entonces: la vista sigue mostrando todos los vencimientos
+-- y record_purchase sigue creando uno por defecto para productos con vida util.
+-- Al aplicar cada parte, usar la version que registre la base.
 --
 -- Fase 46: Vencimientos pasa a ser opt-in por producto (/consejo).
 --
@@ -35,8 +39,6 @@
 --    stock ya no cubre (FIFO: se asume que se consume primero lo más viejo) pasan
 --    a 'consumed'. Las fechas que quedan siguen siendo ESTIMADAS (fecha de la
 --    carga inicial + vida útil): hay que confirmarlas mirando el envase.
-
-alter table products add column if not exists track_expiration boolean not null default false;
 
 alter table product_expirations drop constraint product_expirations_status_check;
 alter table product_expirations add constraint product_expirations_status_check

@@ -17,6 +17,7 @@ type Product = {
   restock_cycle_days: number | null;
   last_restocked_at: string | null;
   needs_restock: boolean;
+  track_expiration: boolean;
   cycle_urgency: string | null;
   auto_restock: boolean;
   restock_snoozed_until: string | null;

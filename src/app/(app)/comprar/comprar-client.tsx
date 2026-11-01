@@ -11,6 +11,7 @@ type Product = {
   name: string;
   unit_label: string;
   default_shelf_life_days: number | null;
+  track_expiration: boolean;
 };
 type Store = { id: string; name: string };
 type Category = { id: string; name: string; sort_order: number };
@@ -51,8 +52,11 @@ type Row = {
 // producto (misma logica que usa record_purchase en el server cuando no
 // se manda expiration_date explicito) — precargarla ahorra tener que
 // tipear la fecha a mano en cada compra; el campo sigue siendo editable.
-function suggestExpiration(shelfLifeDays: number | null): string {
-  if (!shelfLifeDays) return "";
+// Fase 46: solo para productos con "Controlar vencimiento" activado; en el
+// resto el campo queda vacio y opcional (si se escribe una fecha a mano, el
+// producto pasa a controlarse solo).
+function suggestExpiration(shelfLifeDays: number | null, tracked: boolean): string {
+  if (!tracked || !shelfLifeDays) return "";
   const d = new Date();
   d.setDate(d.getDate() + shelfLifeDays);
   return d.toISOString().slice(0, 10);
@@ -85,7 +89,7 @@ export function ComprarClient({
         name: it.products!.name,
         unit_label: it.products!.unit_label,
         quantity: it.quantity,
-        expiration_date: suggestExpiration(it.products!.default_shelf_life_days),
+        expiration_date: suggestExpiration(it.products!.default_shelf_life_days, it.products!.track_expiration),
         replaceStock: false,
       })),
   );
@@ -152,7 +156,7 @@ export function ComprarClient({
           name: product.name,
           unit_label: product.unit_label,
           quantity: 1,
-          expiration_date: suggestExpiration(product.default_shelf_life_days),
+          expiration_date: suggestExpiration(product.default_shelf_life_days, product.track_expiration),
           replaceStock: false,
         },
       ];
@@ -184,7 +188,7 @@ export function ComprarClient({
         name,
         category_id: newProductCategoryId || null,
       })
-      .select("id, name, unit_label, default_shelf_life_days")
+      .select("id, name, unit_label, default_shelf_life_days, track_expiration")
       .single();
     if (error || !product) return;
     addRow(product);
@@ -341,6 +345,7 @@ export function ComprarClient({
               name: s.name ?? "Producto",
               unit_label: s.unit_label ?? "unidad",
               default_shelf_life_days: null,
+              track_expiration: false,
             },
           );
         }}

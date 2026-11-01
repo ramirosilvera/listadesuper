@@ -168,8 +168,10 @@ export function VencimientosTab({
   if (expirations.length === 0) {
     return (
       <p className="py-12 text-center text-sm text-zinc-500">
-        No hay nada por vencer. A medida que registrés compras con fecha de
-        vencimiento (o productos con vida útil conocida), van a aparecer acá.
+        No hay nada por vencer. Acá solo aparecen los productos que marcaste con
+        &quot;Controlar vencimiento&quot; (en Stock, tocá los ajustes de un
+        producto): pensado para lo que se guarda mucho tiempo, como enlatados,
+        salsas o untables.
       </p>
     );
   }

@@ -949,6 +949,28 @@ Auditoría de bugs, UI/UX, IA y seguridad sobre lo último construido, con evide
 
 ---
 
+## Decisión de producto: seguridad mínima
+
+La app es una lista de súper de uso privado (un hogar, sin datos sensibles). Decisión del usuario: la seguridad se mantiene en lo básico (RLS por hogar, funciones que validan membresía, sin acceso anónimo a las RPC) y **no se activa la protección contra contraseñas filtradas** de Supabase Auth ni se invierte tiempo en endurecimiento adicional. Los avisos del advisor sobre RPC `SECURITY DEFINER` ejecutables por usuarios con sesión y sobre contraseñas filtradas se consideran aceptados; no volver a proponerlos como pendientes.
+
+---
+
+## Fase 46: Vencimientos pasa a ser opt-in por producto (en curso)
+
+Pedido: eliminar Vencimientos o dejarlo mínimo con una casilla por producto, más un primer relevamiento y limpieza. **Decisión: mínimo y opt-in, no eliminarlo.** Medido: de 233 vencimientos, 1 activo estaba confirmado por una persona; los otros 216 eran estimaciones automáticas (compra + vida útil por defecto) que le asignaban "vence" a papel higiénico, bolsas de basura o lavandina. El módulo sí sirve para lo que se olvida en la alacena (enlatados, salsas, untables).
+
+**Hecho y desplegado** (compatible con el estado actual de la base)
+- Columna `products.track_expiration` (default false) — parte A, aplicada (`20261101231656_fase46_a_*`).
+- Stock: casilla **"Controlar vencimiento"** en los ajustes de cada producto.
+- Comprar: la fecha de vencimiento solo se precarga en productos controlados; en el resto el campo queda vacío y opcional.
+- Pestaña Vencimientos: el mensaje vacío explica cómo activar el control.
+
+**Pendiente de aplicar en la base** (`20261102040000_fase46_b_*`, marcado "no aplicada"): Supabase pidió una confirmación que no llegó al reemplazar `record_purchase`. Contenido: estado `untracked` (no se reutiliza `discarded`, que además descuenta stock), el primer relevamiento (22 productos de baja rotación: atún, choclo en lata, extracto de tomate, aceituna, aceto balsámico, salsa de barbacoa, ketchup, mayonesa, salsa de soja, dulce de leche, mermelada, pasta de maní, maní, coco rallado, harina leudante, polvo de hornear, aceite de oliva premium, té, crema de leche, leche larga vida, fritolín y esponja de cocina, que es el único vencimiento confirmado a mano), la limpieza (lotes de productos no controlados → `untracked`; en los controlados, lotes que el stock ya no cubre → `consumed`), la vista filtrada por `track_expiration`, `seed_initial_stock` y `record_purchase` (crear vencimiento solo si el producto está controlado o si se escribió una fecha a mano, que además lo activa).
+
+**Estado intermedio mientras tanto**: la vista sigue mostrando los vencimientos existentes y `record_purchase` sigue creando uno por defecto para productos con vida útil; la casilla ya guarda y Comprar ya no precarga fechas en productos sin controlar.
+
+---
+
 ## Equivalencias de numeración
 
 El historial ya tenía una Fase 36 (`21d7a2b`, separar consumo real de corrección de conteo) y una Fase 37 (`42eb726`, días desde la última compra en "queda poco stock"). El trabajo de esta sesión se había rotulado 36-40 por error y se renumeró a 38-43. Los **archivos de migración conservan el nombre con el que quedaron registrados en la base** (no se pueden renombrar sin desalinear el historial de migraciones):
@@ -961,5 +983,6 @@ El historial ya tenía una Fase 36 (`21d7a2b`, separar consumo real de correcci�
 | 41 | Auditoría: conteo atómico | `20261101221419_fase39_conteo_atomico.sql` |
 | 42 | Las respuestas del repaso alimentan las Sugerencias | `20261101222029_fase40_ciclos_desde_repaso.sql` |
 | 43 | Alinear los criterios del motor | `20261101223407_fase43_alinear_criterios.sql` |
+| 46 | Vencimientos opt-in (en curso) | `20261101231656_fase46_a_columna_track_expiration.sql`; pendiente `20261102040000_fase46_b_vencimientos_opt_in_pendiente.sql` |
 | 45 | Auditoría: seguridad, vencimientos y sugerencias de ciclo | `20261101230203_fase45_auditoria_seguridad_vencimientos_ciclos.sql` |
 | 44 | Al agregar a la lista, el stock pasa a 0 | `20261101224725_fase44_motivo_list_zero.sql`, `20261101225345_fase44_columnas_stock_cero_en_lista.sql`, `20261101225559_fase44_stock_cero_al_agregar_a_la_lista.sql` |

@@ -247,6 +247,7 @@ export type Database = {
           needs_restock: boolean
           notes: string | null
           restock_cycle_days: number | null
+          track_expiration: boolean
           unit_label: string
         }
         Insert: {
@@ -262,6 +263,7 @@ export type Database = {
           needs_restock?: boolean
           notes?: string | null
           restock_cycle_days?: number | null
+          track_expiration?: boolean
           unit_label?: string
         }
         Update: {
@@ -277,6 +279,7 @@ export type Database = {
           needs_restock?: boolean
           notes?: string | null
           restock_cycle_days?: number | null
+          track_expiration?: boolean
           unit_label?: string
         }
         Relationships: [

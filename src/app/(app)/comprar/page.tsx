@@ -24,13 +24,13 @@ export default async function ComprarPage() {
     supabase
       .from("shopping_list_items")
       .select(
-        "id, quantity, checked, product_id, products(id, name, unit_label, default_shelf_life_days), shopping_lists!inner(household_id, status)",
+        "id, quantity, checked, product_id, products(id, name, unit_label, default_shelf_life_days, track_expiration), shopping_lists!inner(household_id, status)",
       )
       .eq("shopping_lists.household_id", household.id)
       .eq("shopping_lists.status", "active"),
     supabase
       .from("products")
-      .select("id, name, unit_label, default_shelf_life_days")
+      .select("id, name, unit_label, default_shelf_life_days, track_expiration")
       .eq("household_id", household.id)
       .eq("archived", false)
       .order("name", { ascending: true }),

@@ -16,6 +16,7 @@ type Product = {
   restock_cycle_days: number | null;
   last_restocked_at: string | null;
   needs_restock: boolean;
+  track_expiration: boolean;
   cycle_urgency: string | null;
   auto_restock: boolean;
   restock_snoozed_until: string | null;
@@ -93,6 +94,7 @@ export function StockClient({
   const [thresholdDraft, setThresholdDraft] = useState("");
   const [cycleDraft, setCycleDraft] = useState("");
   const [categoryDraft, setCategoryDraft] = useState("");
+  const [trackExpirationDraft, setTrackExpirationDraft] = useState(false);
   // Nombre y unidad son los dos campos de este panel que no se guardan
   // directo: un cambio de nombre reescribe cómo se ve TODA la compra
   // pasada de este producto (Historial/Reportes muestran el nombre
@@ -293,6 +295,7 @@ export function StockClient({
       product.restock_cycle_days !== null ? String(product.restock_cycle_days) : "",
     );
     setCategoryDraft(product.category_id ?? "");
+    setTrackExpirationDraft(product.track_expiration);
     setConfirmChange(null);
     setRenameError(null);
   }
@@ -320,6 +323,7 @@ export function StockClient({
               low_stock_threshold: threshold,
               restock_cycle_days: cycle,
               category_id: category,
+              track_expiration: trackExpirationDraft,
             }
           : p,
       ),
@@ -335,6 +339,7 @@ export function StockClient({
         low_stock_threshold: threshold,
         restock_cycle_days: cycle,
         category_id: category,
+        track_expiration: trackExpirationDraft,
       })
       .eq("id", product.id);
   }
@@ -834,6 +839,23 @@ export function StockClient({
                         className="h-9 w-20 rounded-lg border border-zinc-300 px-2 text-center text-base dark:border-zinc-700 dark:bg-zinc-900"
                       />
                       días
+                    </label>
+                    {/* Fase 46: Vencimientos es opt-in. Solo tiene sentido para lo
+                        que se olvida en la alacena (enlatados, salsas, untables),
+                        no para lo que se consume seguido. */}
+                    <label className="flex items-start gap-2 text-xs text-zinc-500">
+                      <input
+                        type="checkbox"
+                        checked={trackExpirationDraft}
+                        onChange={(e) => setTrackExpirationDraft(e.target.checked)}
+                        className="mt-0.5 h-5 w-5 shrink-0 accent-brand-600"
+                      />
+                      <span>
+                        Controlar vencimiento
+                        <span className="block text-zinc-400">
+                          Para lo que se guarda mucho tiempo. La fecha se anota cuando lo comprás.
+                        </span>
+                      </span>
                     </label>
                     {confirmChange?.id === p.id ? (
                       <div className="flex flex-col gap-2 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300">
