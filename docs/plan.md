@@ -834,14 +834,14 @@ Pedido del usuario, con motivo concreto: hay productos del import inicial (Fase 
 
 ## Fases 36-37: menos sugerencias y menos idas y vueltas de red
 
-**Fase 36 (sugerencias):** los chips de reposición por ciclo bajaron de 30 a 9 (33 → 12 en total). El ciclo avisa recién al vencer y exige 2+ compras o stock ≤ 1; se recalibraron 3 ciclos con la mediana real. Ver `20261101120000_fase36_*.sql`.
+**Fase 36 (sugerencias):** los chips de reposición por ciclo bajaron de 30 a 9 (33 → 12 en total). El ciclo avisa recién al vencer y exige 2+ compras o stock ≤ 1; se recalibraron 3 ciclos con la mediana real. Ver `20261101215257_fase36_*.sql`.
 
 **Fase 37 (rendimiento).** Medido, no supuesto: las vistas del motor ejecutan en ~2-3 ms con 309 movimientos / 128 productos (`EXPLAIN ANALYZE`), así que el motor **no** es el cuello de botella. La lentitud es de red: etapas de pedidos en serie por navegación. Cambios:
 - `getActiveHousehold()` y el proxy usan `auth.getClaims()` (verificación local del JWT) en vez de `auth.getUser()` (ida y vuelta a Auth en cada navegación y prefetch). Pérdida conocida: una sesión revocada desde el servidor se nota recién al vencer el token (~1 h). Si el proyecto firmara con clave simétrica, `getClaims` cae solo a la red (sin regresión).
 - Etapas en serie por pantalla (incluyendo el proxy y la membresía), antes → ahora: Lista 5 → 3, Reportes 4 → 2, Comprar 4 → 2, Stock 3 → 2. Reportes y Lista piden `profiles` en paralelo (el RLS ya limita a uno mismo + convivientes); Comprar usa un join `!inner` en vez de pedir primero las listas activas.
 - Stock dejó de traer todos los movimientos de compra del hogar (consulta sin tope que crece con el historial): "última compra" sale de `product_replenishment.last_restocked_at`.
 - `vercel.json` fija la región `gru1` (São Paulo), junto a la base (`sa-east-1`). Sin esto Vercel usa por defecto EE.UU. y cada consulta a la base cruza el continente.
-- Migración `20261101130000_fase37_*.sql`: `(select auth.uid())` en 3 policies de RLS e índices de las 2 FK de `suggestion_seen`. Los índices "sin uso" del advisor no se tocan (tablas chicas → Seq Scan; importan cuando crezca el historial).
+- Migración `20261101215751_fase37_*.sql`: `(select auth.uid())` en 3 policies de RLS e índices de las 2 FK de `suggestion_seen`. Los índices "sin uso" del advisor no se tocan (tablas chicas → Seq Scan; importan cuando crezca el historial).
 
 **Limitación declarada:** no hay medición de tiempos reales de punta a punta (sin acceso a Vercel ni credenciales de usuario); los números de etapas son conteo de idas y vueltas, no milisegundos.
 
@@ -851,8 +851,25 @@ Pedido del usuario, con motivo concreto: hay productos del import inicial (Fase 
 
 Pedido: el stock figura inflado porque se compra mucho y casi no se carga el consumo (127 compras vs 15 consumos en 6 semanas); se pidió un motor que resetee o ayude a relevar. **Decisión (Consejo, con el usuario)**: NO resetear solo (misma razón que la fase de "ciclo vencido": fabricaría una cantidad que nadie vio); en cambio la app detecta qué stock es dudoso y se lo hace confirmar en un repaso de ~1 minuto. Respuestas del usuario: estimar y confirmar (sin tocar el stock real hasta confirmar), mínimo = 0, pantalla de repaso rápido, y que lo estimado NO genere sugeridos (solo lo confirmado como "no queda").
 
-- **Base** (`20261101140000_fase38_*.sql`): motivo `count` en `stock_movements` y en `adjust_stock`; vista `product_stock_review` (`needs_review`: stock > 0 y pasó el ciclo efectivo sin compra ni conteo; ciclo efectivo = mediana real de compras si hay 3+ intervalos de ≥ 1 día en 180 días, si no el declarado; ancla = última compra/conteo, o la carga inicial).
+- **Base** (`20261101220930_fase38_*.sql`): motivo `count` en `stock_movements` y en `adjust_stock`; vista `product_stock_review` (`needs_review`: stock > 0 y pasó el ciclo efectivo sin compra ni conteo; ciclo efectivo = mediana real de compras si hay 3+ intervalos de ≥ 1 día en 180 días, si no el declarado; ancla = última compra/conteo, o la carga inicial).
 - **Consumo solo `reason='consumption'`** en `product_replenishment` y `product_suggestions` (antes contaba cualquier baja que no fuera compra, incluidas correcciones y descartes). **Costo conocido**: se pierde la evidencia de las 33 bajas `manual_adjust` previas al 25/9 (el "−" aún no se etiquetaba como consumo); productos con consumo estimado 8 → 1, vuelve a juntarse con el uso.
 - **App**: pestaña "Repaso" en Stock (badge con cuántos faltan, tope de 15 por tanda, más vencidos primero). Botones: **Queda** (delta 0, solo reinicia el reloj), **Poco** (mitad, si hay ≥ 2), **No queda** (0), **Contar** (cantidad exacta), y **Deshacer** de la última acción con cantidad. Todo con `reason='count'`.
 - **Medido el día de la implementación**: 24 productos a revisar (más que los 11 estimados al proponer porque ahora cuentan también los nunca comprados desde la carga inicial). Probado en transacción con `rollback`, con rol y JWT reales: confirmar saca al producto de la lista, "No queda"/"Poco" lo pasan a sugerido, los conteos no tocan la estimación de consumo.
 - **Limitaciones declaradas**: (1) "Deshacer" restituye la cantidad pero el producto queda confirmado hoy (no reaparece hasta el próximo ciclo). (2) Confirmar "Queda" con 1 unidad y el ciclo de compra vencido lo hace sugerido (regla de la Fase 36: stock ≤ 1). (3) Preexistente, no tocado: `StockClient` guarda su estado local, así que ediciones hechas con +/− se pierden al cambiar de pestaña y volver (el repaso sí se conserva).
+
+---
+
+## Fase 39: auditoría de las Fases 36-38
+
+Nota de numeración: el repo ya tenía una "Fase 36" (`21d7a2b`, separar consumo real de corrección de conteo); las "Fases 36-37" de arriba (sugerencias y rendimiento) reutilizaron ese número por error. Los archivos de migración llevan la versión real registrada en la base, así que son la referencia.
+
+**Bug corregido (reproducido contra la base)**: el repaso calculaba el delta en el navegador con la cantidad que traía la pantalla. Si en el medio alguien bajaba el stock desde Stock con el "−", "No queda" dejaba el stock **negativo** (figuraba 2, se consumió 1, "No queda" → −1); "Queda" con una cantidad vieja podía subir el stock sin querer. Fix: `set_stock_count()` (`20261101221419_fase39_*.sql`) resuelve un conteo absoluto en la base, atómico y con la fila del producto bloqueada; `null` = "Queda" (confirma lo que haya realmente). Rechaza negativos y NaN; mismos permisos que `adjust_stock` (anon sin acceso). Probado con rol/JWT reales y `rollback`.
+
+**Correcciones de UI/UX en el repaso**: contador del badge con actualización funcional (dos toques seguidos ya no se pisan); "Deshacer" pasó de una sola acción a una pila de hasta 10 (confirmar con "Queda" otro producto ya no borra el deshacer anterior); botones de 44 px en grilla 2×2 (antes 32 px); Enter guarda en "Contar"; el badge de la pestaña muestra "15+" (tope de una tanda) en vez del total.
+
+**Hallazgos que NO se cambiaron (decisión del usuario)**:
+1. La pestaña Stock marca "Bajo stock" a **24** productos (ciclo `vencido` o `esta_semana`) mientras los chips de Lista/Comprar son 2: dos criterios distintos para "poco stock".
+2. Dos ciclos distintos: Repaso usa el ciclo *aprendido* (mediana real, 3+ intervalos) y los sugeridos usan el *declarado*; difieren en 6 productos.
+3. El orden del repaso por "veces vencido" pone primero a los nunca comprados con ciclo corto (ej. Capelettis, 7 días, 7,2×).
+4. Con consumo solo `consumption`, la predicción "se está por acabar" quedó casi apagada (1 producto) hasta juntar uso.
+5. Sin tests automáticos en el repo; el flujo completo del repaso y las consultas nuevas de Comprar no se verificaron en un navegador con sesión real.

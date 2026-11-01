@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Badge, SegmentedControl } from "@/components/ui";
 import { StockClient } from "./stock-client";
 import { RepasoTab } from "./repaso-tab";
-import type { ReviewItem } from "@/lib/stock-review";
+import { REVIEW_BATCH, type ReviewItem } from "@/lib/stock-review";
 import { VencimientosTab } from "./vencimientos-tab";
 
 type Product = {
@@ -80,8 +80,10 @@ export function StockTabs({
             label: "Repaso",
             badge:
               pendingReview > 0 ? (
+                // Tope visual en 15 (el tamaño de una tanda): un "24" grande
+                // fue justo lo que molestó en Vencimientos.
                 <Badge variant="warning" className="ml-0.5">
-                  {pendingReview}
+                  {pendingReview > REVIEW_BATCH ? `${REVIEW_BATCH}+` : pendingReview}
                 </Badge>
               ) : undefined,
           },

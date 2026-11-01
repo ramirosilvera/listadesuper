@@ -1,9 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button, Card, Input } from "@/components/ui";
-import { REVIEW_BATCH, REVIEW_COLUMNS, toReviewItems, type ReviewItem } from "@/lib/stock-review";
+import {
+  REVIEW_BATCH,
+  REVIEW_COLUMNS,
+  toReviewItems,
+  type ReviewItem,
+} from "@/lib/stock-review";
 
 // Fase 38: repaso rápido de stock. El stock figura inflado porque se compra
 // mucho y casi no se carga el consumo; en vez de resetearlo solo (fabricaría
@@ -11,6 +16,11 @@ import { REVIEW_BATCH, REVIEW_COLUMNS, toReviewItems, type ReviewItem } from "@/
 // productos pasaron su ciclo sin una compra ni un conteo que los confirme, y
 // acá la persona los confirma con un toque. Cada respuesta se guarda con
 // reason='count' (no cuenta como consumo en las estadísticas).
+//
+// Fase 39 (auditoría): el conteo es ABSOLUTO y lo resuelve la base
+// (set_stock_count) contra el stock real de ese instante. Antes el delta se
+// calculaba acá con la cantidad que tenía la pantalla al cargar, y si en el
+// medio alguien bajaba el stock desde Stock, "No queda" lo dejaba negativo.
 
 const FRACTIONAL_UNIT = /^(kg|l|lt|lts|litros?|g|gr|ml|cc)$/i;
 
@@ -34,7 +44,19 @@ function fmtQty(n: number) {
   return Number.isInteger(n) ? String(n) : String(Math.round(n * 100) / 100);
 }
 
-type LastAction = { item: ReviewItem; delta: number; label: string };
+type CountResult = { previous_quantity: number; new_quantity: number; delta: number };
+
+function parseCountResult(data: unknown): CountResult | null {
+  if (!data || typeof data !== "object") return null;
+  const d = data as Record<string, unknown>;
+  const previous = Number(d.previous_quantity);
+  const next = Number(d.new_quantity);
+  const delta = Number(d.delta);
+  if (![previous, next, delta].every(Number.isFinite)) return null;
+  return { previous_quantity: previous, new_quantity: next, delta };
+}
+
+type UndoEntry = { item: ReviewItem; delta: number; label: string };
 
 export function RepasoTab({
   householdId,
@@ -56,60 +78,67 @@ export function RepasoTab({
   const [countingId, setCountingId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [last, setLast] = useState<LastAction | null>(null);
+  // Pila (no solo la última acción): confirmar con "Queda" otro producto no
+  // debe borrar la posibilidad de deshacer un "No queda" anterior.
+  const [undoStack, setUndoStack] = useState<UndoEntry[]>([]);
   const [loadingMore, setLoadingMore] = useState(false);
 
-  function updateTotal(next: number) {
-    setTotal(next);
-    onTotalChange(next);
-  }
+  // El contador del padre se sincroniza desde acá. Se actualiza con
+  // funciones (no con el valor capturado) para que dos toques seguidos
+  // sobre productos distintos no pisen la cuenta del otro.
+  useEffect(() => {
+    onTotalChange(total);
+  }, [total, onTotalChange]);
 
-  async function apply(item: ReviewItem, newQuantity: number, label: string) {
-    if (!Number.isFinite(newQuantity) || newQuantity < 0) return;
-    const delta = Math.round((newQuantity - item.quantity_on_hand) * 1000) / 1000;
+  async function apply(item: ReviewItem, target: number | null, label: string) {
+    if (target !== null && (!Number.isFinite(target) || target < 0)) return;
 
     setError(null);
     setBusy(item.product_id);
     setCountingId(null);
 
-    const { error: rpcError } = await supabase.rpc("adjust_stock", {
+    const { data, error: rpcError } = await supabase.rpc("set_stock_count", {
       p_household_id: householdId,
       p_product_id: item.product_id,
-      p_delta: delta,
-      p_reason: "count",
+      // undefined = "Queda": confirmar lo que haya realmente, sin cambiarlo.
+      ...(target !== null ? { p_quantity: target } : {}),
     });
     setBusy(null);
 
-    if (rpcError) {
+    const result = parseCountResult(data);
+    if (rpcError || !result) {
       setError(`No se pudo guardar "${item.name}". Probá de nuevo.`);
       return;
     }
 
     setItems((prev) => prev.filter((i) => i.product_id !== item.product_id));
-    updateTotal(Math.max(0, total - 1));
-    onApplied(item.product_id, newQuantity);
-    // "Queda" (delta 0) solo reinicia el reloj: no hay cantidad que deshacer.
-    setLast(delta !== 0 ? { item, delta, label } : null);
+    setTotal((t) => Math.max(0, t - 1));
+    onApplied(item.product_id, result.new_quantity);
+    // Solo se puede deshacer lo que cambió una cantidad; "Queda" (delta 0)
+    // apenas reinicia el reloj.
+    if (result.delta !== 0) {
+      setUndoStack((prev) => [...prev, { item, delta: result.delta, label }].slice(-10));
+    }
   }
 
   async function undo() {
-    if (!last) return;
-    const { item, delta } = last;
+    const entry = undoStack[undoStack.length - 1];
+    if (!entry) return;
     setError(null);
     const { error: rpcError } = await supabase.rpc("adjust_stock", {
       p_household_id: householdId,
-      p_product_id: item.product_id,
-      p_delta: -delta,
+      p_product_id: entry.item.product_id,
+      p_delta: -entry.delta,
       p_reason: "count",
     });
     if (rpcError) {
-      setError(`No se pudo deshacer "${item.name}".`);
+      setError(`No se pudo deshacer "${entry.item.name}".`);
       return;
     }
-    setItems((prev) => [item, ...prev]);
-    updateTotal(total + 1);
-    onApplied(item.product_id, item.quantity_on_hand);
-    setLast(null);
+    setUndoStack((prev) => prev.slice(0, -1));
+    setItems((prev) => [entry.item, ...prev.filter((i) => i.product_id !== entry.item.product_id)]);
+    setTotal((t) => t + 1);
+    onApplied(entry.item.product_id, entry.item.quantity_on_hand);
   }
 
   async function loadMore() {
@@ -128,9 +157,10 @@ export function RepasoTab({
       return;
     }
     setItems(toReviewItems(data));
-    updateTotal(count ?? 0);
-    setLast(null);
+    setTotal(count ?? 0);
   }
+
+  const lastUndo = undoStack[undoStack.length - 1];
 
   return (
     <div className="flex flex-col gap-3">
@@ -149,9 +179,9 @@ export function RepasoTab({
         </div>
       )}
 
-      {last && (
+      {lastUndo && (
         <div className="flex items-center justify-between gap-2 rounded-lg bg-zinc-100 px-3 py-2 text-sm text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
-          <span className="min-w-0 truncate">{last.label}</span>
+          <span className="min-w-0 truncate">{lastUndo.label}</span>
           <Button size="sm" variant="ghost" onClick={undo}>
             Deshacer
           </Button>
@@ -162,6 +192,8 @@ export function RepasoTab({
         const poco = pocoTarget(item);
         const disabled = busy === item.product_id;
         const days = item.days_since_confirmed;
+        const draftNumber = Number(draft);
+        const draftInvalid = draft.trim() === "" || Number.isNaN(draftNumber) || draftNumber < 0;
         return (
           <Card key={item.product_id} className="flex flex-col gap-3 p-4">
             <div>
@@ -179,7 +211,14 @@ export function RepasoTab({
             </div>
 
             {countingId === item.product_id ? (
-              <div className="flex items-center gap-2">
+              <form
+                className="flex items-center gap-2"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (draftInvalid || disabled) return;
+                  apply(item, draftNumber, `${item.name}: contado ${fmtQty(draftNumber)}`);
+                }}
+              >
                 <Input
                   type="number"
                   inputMode="decimal"
@@ -190,28 +229,32 @@ export function RepasoTab({
                   onChange={(e) => setDraft(e.target.value)}
                   aria-label={`Cantidad real de ${item.name}`}
                 />
-                <Button
-                  disabled={disabled || draft.trim() === "" || Number.isNaN(Number(draft)) || Number(draft) < 0}
-                  onClick={() => apply(item, Number(draft), `${item.name}: contado ${fmtQty(Number(draft))}`)}
-                >
+                <Button type="submit" disabled={disabled || draftInvalid}>
                   Guardar
                 </Button>
-                <Button variant="ghost" onClick={() => setCountingId(null)}>
+                <Button type="button" variant="ghost" onClick={() => setCountingId(null)}>
                   Cancelar
                 </Button>
-              </div>
+              </form>
             ) : (
-              <div className="flex flex-wrap gap-2">
+              // Botones de 44px de alto (size md): son la acción principal de
+              // esta pantalla y se tocan con el carrito en la otra mano.
+              <div className="grid grid-cols-2 gap-2">
                 <Button
-                  size="sm"
                   disabled={disabled}
-                  onClick={() => apply(item, item.quantity_on_hand, `${item.name}: confirmado`)}
+                  onClick={() => apply(item, null, `${item.name}: confirmado`)}
                 >
                   Queda
                 </Button>
+                <Button
+                  variant="secondary"
+                  disabled={disabled}
+                  onClick={() => apply(item, 0, `${item.name}: no queda`)}
+                >
+                  No queda
+                </Button>
                 {poco !== null && (
                   <Button
-                    size="sm"
                     variant="secondary"
                     disabled={disabled}
                     onClick={() => apply(item, poco, `${item.name}: queda ${fmtQty(poco)}`)}
@@ -220,15 +263,6 @@ export function RepasoTab({
                   </Button>
                 )}
                 <Button
-                  size="sm"
-                  variant="secondary"
-                  disabled={disabled}
-                  onClick={() => apply(item, 0, `${item.name}: no queda`)}
-                >
-                  No queda
-                </Button>
-                <Button
-                  size="sm"
                   variant="ghost"
                   disabled={disabled}
                   onClick={() => {

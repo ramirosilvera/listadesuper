@@ -882,6 +882,14 @@ export type Database = {
         }
         Returns: string
       }
+      set_stock_count: {
+        Args: {
+          p_household_id: string
+          p_product_id: string
+          p_quantity?: number
+        }
+        Returns: Json
+      }
       apply_product_suggestion: {
         Args: {
           p_product_id: string
