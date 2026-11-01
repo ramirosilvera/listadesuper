@@ -25,7 +25,7 @@ import { createClient } from "@/lib/supabase/server";
 export const getActiveHousehold = cache(async () => {
   const supabase = await createClient();
 
-  // Fase 37: getClaims() en vez de getUser(). getUser() es una ida y vuelta
+  // Fase 39: getClaims() en vez de getUser(). getUser() es una ida y vuelta
   // de red al servidor de Auth en CADA navegación; getClaims() verifica la
   // firma del JWT localmente (con la clave pública JWKS, que se cachea) y
   // solo cae a la red si el proyecto firmara con clave simétrica. El

@@ -1,4 +1,4 @@
--- Fase 36: bajar el volumen de sugerencias de reposición (/consejo).
+-- Fase 38: bajar el volumen de sugerencias de reposición (/consejo).
 --
 -- Problema medido contra datos reales: 33 chips activos contra ~14
 -- productos comprados por semana. 30 de 33 eran 'ciclo_de_compra', con

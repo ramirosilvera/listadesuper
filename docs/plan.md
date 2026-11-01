@@ -832,11 +832,11 @@ Pedido del usuario, con motivo concreto: hay productos del import inicial (Fase 
 
 ---
 
-## Fases 36-37: menos sugerencias y menos idas y vueltas de red
+## Fases 38-39: menos sugerencias y menos idas y vueltas de red
 
-**Fase 36 (sugerencias):** los chips de reposición por ciclo bajaron de 30 a 9 (33 → 12 en total). El ciclo avisa recién al vencer y exige 2+ compras o stock ≤ 1; se recalibraron 3 ciclos con la mediana real. Ver `20261101215257_fase36_*.sql`.
+**Fase 38 (sugerencias):** los chips de reposición por ciclo bajaron de 30 a 9 (33 → 12 en total). El ciclo avisa recién al vencer y exige 2+ compras o stock ≤ 1; se recalibraron 3 ciclos con la mediana real. Ver `20261101215257_fase36_*.sql`.
 
-**Fase 37 (rendimiento).** Medido, no supuesto: las vistas del motor ejecutan en ~2-3 ms con 309 movimientos / 128 productos (`EXPLAIN ANALYZE`), así que el motor **no** es el cuello de botella. La lentitud es de red: etapas de pedidos en serie por navegación. Cambios:
+**Fase 39 (rendimiento).** Medido, no supuesto: las vistas del motor ejecutan en ~2-3 ms con 309 movimientos / 128 productos (`EXPLAIN ANALYZE`), así que el motor **no** es el cuello de botella. La lentitud es de red: etapas de pedidos en serie por navegación. Cambios:
 - `getActiveHousehold()` y el proxy usan `auth.getClaims()` (verificación local del JWT) en vez de `auth.getUser()` (ida y vuelta a Auth en cada navegación y prefetch). Pérdida conocida: una sesión revocada desde el servidor se nota recién al vencer el token (~1 h). Si el proyecto firmara con clave simétrica, `getClaims` cae solo a la red (sin regresión).
 - Etapas en serie por pantalla (incluyendo el proxy y la membresía), antes → ahora: Lista 5 → 3, Reportes 4 → 2, Comprar 4 → 2, Stock 3 → 2. Reportes y Lista piden `profiles` en paralelo (el RLS ya limita a uno mismo + convivientes); Comprar usa un join `!inner` en vez de pedir primero las listas activas.
 - Stock dejó de traer todos los movimientos de compra del hogar (consulta sin tope que crece con el historial): "última compra" sale de `product_replenishment.last_restocked_at`.
@@ -847,7 +847,7 @@ Pedido del usuario, con motivo concreto: hay productos del import inicial (Fase 
 
 ---
 
-## Fase 38: relevamiento asistido de stock ("Repaso")
+## Fase 40: relevamiento asistido de stock ("Repaso")
 
 Pedido: el stock figura inflado porque se compra mucho y casi no se carga el consumo (127 compras vs 15 consumos en 6 semanas); se pidió un motor que resetee o ayude a relevar. **Decisión (Consejo, con el usuario)**: NO resetear solo (misma razón que la fase de "ciclo vencido": fabricaría una cantidad que nadie vio); en cambio la app detecta qué stock es dudoso y se lo hace confirmar en un repaso de ~1 minuto. Respuestas del usuario: estimar y confirmar (sin tocar el stock real hasta confirmar), mínimo = 0, pantalla de repaso rápido, y que lo estimado NO genere sugeridos (solo lo confirmado como "no queda").
 
@@ -855,13 +855,13 @@ Pedido: el stock figura inflado porque se compra mucho y casi no se carga el con
 - **Consumo solo `reason='consumption'`** en `product_replenishment` y `product_suggestions` (antes contaba cualquier baja que no fuera compra, incluidas correcciones y descartes). **Costo conocido**: se pierde la evidencia de las 33 bajas `manual_adjust` previas al 25/9 (el "−" aún no se etiquetaba como consumo); productos con consumo estimado 8 → 1, vuelve a juntarse con el uso.
 - **App**: pestaña "Repaso" en Stock (badge con cuántos faltan, tope de 15 por tanda, más vencidos primero). Botones: **Queda** (delta 0, solo reinicia el reloj), **Poco** (mitad, si hay ≥ 2), **No queda** (0), **Contar** (cantidad exacta), y **Deshacer** de la última acción con cantidad. Todo con `reason='count'`.
 - **Medido el día de la implementación**: 24 productos a revisar (más que los 11 estimados al proponer porque ahora cuentan también los nunca comprados desde la carga inicial). Probado en transacción con `rollback`, con rol y JWT reales: confirmar saca al producto de la lista, "No queda"/"Poco" lo pasan a sugerido, los conteos no tocan la estimación de consumo.
-- **Limitaciones declaradas**: (1) "Deshacer" restituye la cantidad pero el producto queda confirmado hoy (no reaparece hasta el próximo ciclo). (2) Confirmar "Queda" con 1 unidad y el ciclo de compra vencido lo hace sugerido (regla de la Fase 36: stock ≤ 1). (3) Preexistente, no tocado: `StockClient` guarda su estado local, así que ediciones hechas con +/− se pierden al cambiar de pestaña y volver (el repaso sí se conserva).
+- **Limitaciones declaradas**: (1) "Deshacer" restituye la cantidad pero el producto queda confirmado hoy (no reaparece hasta el próximo ciclo). (2) Confirmar "Queda" con 1 unidad y el ciclo de compra vencido lo hace sugerido (regla de la Fase 38: stock ≤ 1). (3) Preexistente, no tocado: `StockClient` guarda su estado local, así que ediciones hechas con +/− se pierden al cambiar de pestaña y volver (el repaso sí se conserva).
 
 ---
 
-## Fase 39: auditoría de las Fases 36-38
+## Fase 41: auditoría de las Fases 38-40
 
-Nota de numeración: el repo ya tenía una "Fase 36" (`21d7a2b`, separar consumo real de corrección de conteo); las "Fases 36-37" de arriba (sugerencias y rendimiento) reutilizaron ese número por error. Los archivos de migración llevan la versión real registrada en la base, así que son la referencia.
+Nota de numeración: ver la tabla de equivalencias al final de este documento.
 
 **Bug corregido (reproducido contra la base)**: el repaso calculaba el delta en el navegador con la cantidad que traía la pantalla. Si en el medio alguien bajaba el stock desde Stock con el "−", "No queda" dejaba el stock **negativo** (figuraba 2, se consumió 1, "No queda" → −1); "Queda" con una cantidad vieja podía subir el stock sin querer. Fix: `set_stock_count()` (`20261101221419_fase39_*.sql`) resuelve un conteo absoluto en la base, atómico y con la fila del producto bloqueada; `null` = "Queda" (confirma lo que haya realmente). Rechaza negativos y NaN; mismos permisos que `adjust_stock` (anon sin acceso). Probado con rol/JWT reales y `rollback`.
 
@@ -876,7 +876,7 @@ Nota de numeración: el repo ya tenía una "Fase 36" (`21d7a2b`, separar consumo
 
 ---
 
-## Fase 40: las respuestas del Repaso alimentan el módulo de Sugerencias
+## Fase 42: las respuestas del Repaso alimentan el módulo de Sugerencias
 
 Pedido: que la app proponga alargar o acortar ciclos a partir de las respuestas del repaso, **revisando antes el módulo de Sugerencias que ya hace esa función para integrarlo**. Revisión: `product_suggestions` → panel en Reportes → `apply/dismiss_product_suggestion` → aviso de "sin leer" ya implementan "proponer un cambio de ciclo"; lo único que faltaba era la **evidencia** (solo intervalos entre compras, con 3 intervalos mínimos). Medido: 11 de 75 productos con ciclo llegan a 4 compras; los otros 64 nunca podrían recibir una sugerencia. Se integró en la misma vista (tipo `ciclo_de_compra`), sin tabla, RPC ni pantalla nuevas.
 
@@ -886,4 +886,35 @@ Pedido: que la app proponga alargar o acortar ciclos a partir de las respuestas 
 
 **Verificado** (transacción con `rollback` sobre productos reales): Masa para empanadas 14 → 9 (2 ciclos de compra + 1 repaso); Nuggets 7 → "al menos 19" ("Queda" a los 19 días); Muzzarella y Mermelada sin sugerencia; Queso cremoso (se acabó a los 19, ciclo 21) sin sugerencia por diferencia chica; las sugerencias de hoy y los otros tipos quedaron idénticos. UI: el aviso del Repaso enlaza a Reportes › Sugerencias; el texto vacío del panel menciona los repasos.
 
-**Limitaciones**: (1) "Deshacer" un conteo hace que el último conteo de la ventana sea la reversión (cuenta como "no se consumió"). (2) Sin repasos hechos todavía (0 conteos en producción), no hay evidencia real de cómo se comporta con tus respuestas. (3) Al aceptar una sugerencia, el ciclo declarado converge con el aprendido que usa el Repaso (hallazgo 2 de la Fase 39).
+**Limitaciones**: (1) "Deshacer" un conteo hace que el último conteo de la ventana sea la reversión (cuenta como "no se consumió"). (2) Sin repasos hechos todavía (0 conteos en producción), no hay evidencia real de cómo se comporta con tus respuestas. (3) Al aceptar una sugerencia, el ciclo declarado converge con el aprendido que usa el Repaso (hallazgo 2 de la Fase 41).
+
+---
+
+## Fase 43: alinear los criterios del motor
+
+Se pidió alinear y corregir según criterio los cinco hallazgos que dejó la auditoría de las Fases 38-42. Migración `20261101223407_fase43_alinear_criterios.sql` (probada primero en una transacción con `rollback`; aplicada sin `DROP VIEW`, porque la herramienta de Supabase pide una confirmación aparte para las instrucciones destructivas y esa confirmación no llegó; se conservan las dos columnas viejas de `product_stock_review`, sin uso, para limpiar más adelante).
+
+1. **Un solo "poco stock".** La pestaña Stock marcaba "Bajo stock" por ciclo (`vencido`/`esta_semana`) a **24** productos mientras los sugeridos de Lista y Comprar eran **2**. Ahora usa la regla de `product_replenishment.should_restock` (el comentario de `stockLevel` ya decía que la reutilizaba, pero el código no lo hacía). De esa regla viaja del servidor solo la parte automática (`auto_restock`: predicción o ciclo); la marca manual y el umbral se evalúan en vivo para que tocar "−" avise al instante. Además, el ciclo ya no mira solo la última compra sino la última **confirmación** (compra o conteo del repaso): si en el repaso respondiste "Queda", el producto deja de figurar vencido (probado: "Queda" en Nuggets lo saca de los sugeridos). `days_since_last_restock` sigue siendo la última compra, porque es el dato del texto "hace X días que no lo comprás".
+2. **Un solo ciclo.** El repaso usaba el ciclo *aprendido* (mediana de compras) y los sugeridos el *declarado*; diferían en 6 productos. Ahora ambos usan el declarado: lo controla la persona, y el módulo de Sugerencias ya propone corregirlo cuando el real se aleja (≥ 30 % y 3 días).
+3. **Orden del repaso.** Antes por días/ciclo (encabezaban los nunca comprados con ciclo corto, p. ej. Capelettis). Ahora primero lo comprado de verdad y, dentro de eso, más días de atraso; lo que solo tiene la carga inicial va al final.
+4. **Predicción "se está por acabar".** Había quedado casi apagada (1 producto) al contar solo `reason='consumption'`. Verificado en la base: las 33 bajas `manual_adjust` son **todas** anteriores al 24/9 20:00 UTC (cuando el botón "−" pasó a etiquetarse `consumption`; hasta entonces era la única forma de bajar el stock) y no hay ninguna posterior; las 15 `consumption` son todas posteriores. `is_consumption_event()` cuenta ambas y deja afuera correcciones, repasos y descartes. Resultado: productos con consumo estimado 1 → 8, y ninguno cae hoy en la zona de aviso (≤ 3 días), así que no se agregaron sugeridos.
+5. **Numeración.** Ver la tabla de equivalencias.
+
+**Resultado medido (rollback)**: sugeridos de Lista/Comprar 2 → 2; panel de Sugerencias 0 → 0; a revisar en el repaso 24 → 23 (Fideos largos: ciclo aprendido 9 vs cargado 14).
+
+**Limitaciones**: (a) el corte del 24/9 es una fecha fija dentro de la función; si hubiera datos de otro hogar con otra historia habría que revisarlo. (b) La parte de ciclo/predicción del estado "Bajo stock" de Stock se calcula al cargar la pantalla; el umbral y la marca manual sí se actualizan al instante. (c) Un producto en 1 unidad tras responder "Poco" no se sugiere salvo que su umbral lo pida: el ciclo mira la confirmación, no la cantidad.
+
+---
+
+## Equivalencias de numeración
+
+El historial ya tenía una Fase 36 (`21d7a2b`, separar consumo real de corrección de conteo) y una Fase 37 (`42eb726`, días desde la última compra en "queda poco stock"). El trabajo de esta sesión se había rotulado 36-40 por error y se renumeró a 38-43. Los **archivos de migración conservan el nombre con el que quedaron registrados en la base** (no se pueden renombrar sin desalinear el historial de migraciones):
+
+| Fase (numeración correcta) | Tema | Archivo de migración |
+|---|---|---|
+| 38 | Menos sugerencias de reposición por ciclo | `20261101215257_fase36_menos_sugerencias_de_ciclo.sql` |
+| 39 | Rendimiento (RLS e índices) y menos idas y vueltas de red | `20261101215751_fase37_rendimiento_rls_e_indices.sql` |
+| 40 | Repaso de stock (relevamiento asistido) | `20261101220930_fase38_relevamiento_de_stock.sql` |
+| 41 | Auditoría: conteo atómico | `20261101221419_fase39_conteo_atomico.sql` |
+| 42 | Las respuestas del repaso alimentan las Sugerencias | `20261101222029_fase40_ciclos_desde_repaso.sql` |
+| 43 | Alinear los criterios del motor | `20261101223407_fase43_alinear_criterios.sql` |

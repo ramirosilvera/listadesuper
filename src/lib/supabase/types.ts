@@ -821,6 +821,8 @@ export type Database = {
           cycle_source: string | null
           days_since_confirmed: number | null
           effective_cycle_days: number | null
+          days_overdue: number | null
+          has_purchase: boolean | null
           household_id: string | null
           name: string | null
           needs_review: boolean | null

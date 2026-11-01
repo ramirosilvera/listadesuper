@@ -18,6 +18,7 @@ type Product = {
   last_restocked_at: string | null;
   needs_restock: boolean;
   cycle_urgency: string | null;
+  auto_restock: boolean;
   restock_snoozed_until: string | null;
 };
 
@@ -51,7 +52,7 @@ export function StockTabs({
   reviewTotal: number;
 }) {
   const [tab, setTab] = useState<"stock" | "repaso" | "vencimientos">("stock");
-  // Fase 38: el repaso corrige cantidades; la pestaña Stock se vuelve a
+  // Fase 40: el repaso corrige cantidades; la pestaña Stock se vuelve a
   // montar al volver (render condicional) y lee de acá, así ve el número
   // confirmado en vez del que vino del servidor al cargar la página.
   const [liveProducts, setLiveProducts] = useState(products);

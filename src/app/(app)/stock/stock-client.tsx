@@ -17,6 +17,7 @@ type Product = {
   last_restocked_at: string | null;
   needs_restock: boolean;
   cycle_urgency: string | null;
+  auto_restock: boolean;
   restock_snoozed_until: string | null;
 };
 
@@ -25,30 +26,39 @@ type Category = { id: string; name: string; sort_order: number };
 const LAST_RESTOCK_FMT = new Intl.DateTimeFormat("es-AR", { day: "2-digit", month: "2-digit" });
 
 // "Vacío" siempre se marca (0 unidades es un hecho, no depende de gusto).
-// "Bajo" depende de low_stock_threshold (cada quien configura cuánto
-// quiere tener de ese producto), de needs_restock (marca manual de "está
-// abierto y queda poco" -- Fase 25), o de cycle_urgency en 'vencido'/
-// 'esta_semana' (falta poco o nada para el próximo ciclo esperado de
-// compra -- Fase 8, con margen desde Fase 29). Son distintas formas de
-// detectar lo mismo, ya unificadas en
-// product_replenishment.should_restock -- acá se reusa esa misma unión,
-// no se define "poco stock" por cuarta vez.
+// "Bajo" es EXACTAMENTE la misma regla que los sugeridos de Lista y Comprar
+// (product_replenishment.should_restock, Fase 43): marca manual ("está abierto
+// y queda poco", Fase 25), umbral, predicción por consumo o ciclo de compra
+// vencido sin confirmar. Antes esta pantalla marcaba "Bajo stock" por
+// cycle_urgency 'vencido'/'esta_semana' (24 productos) mientras los sugeridos
+// eran 2: dos criterios para lo mismo, y la app parecía contradecirse.
 //
-// Deliberadamente NO se resetea quantity_on_hand a 0 cuando se cumple el
-// ciclo (se evaluó y se descartó, ver docs/plan.md): el ciclo es un
-// promedio de hábito, no una medición real -- forzar el número a 0
-// fabricaría una cantidad falsa cada vez que en la práctica todavía
-// quedara algo, y esa cantidad falsa quedaría arrastrada para siempre en
-// el conteo (nadie la corrige, es justo lo que se pidió automatizar).
-// Cycle_alert dispara la MISMA alerta visual sin tocar el número real.
+// Qué viaja del servidor y qué se evalúa en vivo: la parte automática (predicción
+// o ciclo) llega ya calculada en `auto_restock`; la marca manual y el umbral se
+// evalúan acá con la cantidad actual, para que tocar "−" y cruzar el umbral
+// avise al instante sin recargar. Un producto pospuesto (Fase 30) no se marca por
+// umbral, igual que en la vista.
+//
+// Deliberadamente NO se resetea quantity_on_hand a 0 cuando se cumple el ciclo
+// (se evaluó y se descartó, ver docs/plan.md): para eso está el Repaso, que le
+// pide a la persona que confirme lo que realmente hay.
 function stockLevel(
-  p: Pick<Product, "quantity_on_hand" | "low_stock_threshold" | "needs_restock" | "cycle_urgency">,
+  p: Pick<
+    Product,
+    | "quantity_on_hand"
+    | "low_stock_threshold"
+    | "needs_restock"
+    | "auto_restock"
+    | "restock_snoozed_until"
+  >,
 ) {
   if (p.quantity_on_hand <= 0) return "empty" as const;
-  if (p.needs_restock || p.cycle_urgency === "vencido" || p.cycle_urgency === "esta_semana") {
-    return "low" as const;
-  }
-  if (p.low_stock_threshold !== null && p.quantity_on_hand <= p.low_stock_threshold) {
+  if (p.needs_restock || p.auto_restock) return "low" as const;
+  if (
+    !isSnoozed(p) &&
+    p.low_stock_threshold !== null &&
+    p.quantity_on_hand <= p.low_stock_threshold
+  ) {
     return "low" as const;
   }
   return "ok" as const;
@@ -397,7 +407,7 @@ export function StockClient({
     if (!error) {
       const { data } = await supabase
         .from("product_replenishment")
-        .select("cycle_urgency, restock_snoozed_until")
+        .select("cycle_urgency, restock_snoozed_until, should_restock, restock_reason")
         .eq("product_id", product.id)
         .maybeSingle();
       if (data) {
@@ -408,6 +418,10 @@ export function StockClient({
                   ...p,
                   cycle_urgency: data.cycle_urgency,
                   restock_snoozed_until: data.restock_snoozed_until,
+                  auto_restock:
+                    data.should_restock === true &&
+                    (data.restock_reason === "prediccion" ||
+                      data.restock_reason === "ciclo_de_compra"),
                 }
               : p,
           ),
@@ -590,9 +604,7 @@ export function StockClient({
                     {statusText && (
                       <span
                         className={
-                          p.needs_restock ||
-                          p.cycle_urgency === "vencido" ||
-                          p.cycle_urgency === "esta_semana"
+                          p.needs_restock || p.auto_restock
                             ? "font-medium text-amber-600 dark:text-amber-400"
                             : "text-zinc-400"
                         }

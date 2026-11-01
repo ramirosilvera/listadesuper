@@ -1,7 +1,3 @@
--- ESTADO: NO APLICADA a la base. Pendiente de autorizar el DROP VIEW de
--- product_stock_review y de repetir la prueba en transaccion (rollback).
--- Al aplicarla, renombrar este archivo con la version que registre la base.
---
 -- Fase 43: alinear los criterios del motor (/consejo, auditoria de las Fases 38-42).
 --
 -- 1) UN SOLO "poco stock". La pestana Stock marcaba "Bajo stock" a 24
@@ -334,8 +330,11 @@ where p.archived = false
       and d.dismissed_at > coalesce(lr.last_restocked_at, p.created_at)
   );
 
-drop view if exists product_stock_review;
-create view product_stock_review
+-- Vista del repaso: CREATE OR REPLACE (sin DROP) conservando las columnas que ya
+-- tenia, en el mismo orden; effective_cycle_days y cycle_source quedan fijos en
+-- el ciclo declarado (columnas sin uso que se pueden limpiar mas adelante) y las
+-- dos nuevas, has_purchase y days_overdue, van al final.
+create or replace view product_stock_review
   with (security_invoker = true)
 as
 with anchors as (
@@ -368,14 +367,19 @@ select
   b.unit_label,
   b.quantity_on_hand,
   b.restock_cycle_days,
+  b.restock_cycle_days as effective_cycle_days,
+  'declarado'::text as cycle_source,
   b.anchor_at,
-  b.has_purchase,
   extract(day from now() - b.anchor_at)::int as days_since_confirmed,
-  greatest(0, extract(day from now() - b.anchor_at)::int - coalesce(b.restock_cycle_days, 0)) as days_overdue,
+  case when b.restock_cycle_days > 0
+    then round((extract(epoch from now() - b.anchor_at) / 86400 / b.restock_cycle_days)::numeric, 2)
+  end as overdue_ratio,
   (
     b.restock_cycle_days is not null
     and b.restock_cycle_days > 0
     and b.quantity_on_hand > 0
     and extract(day from now() - b.anchor_at) >= b.restock_cycle_days
-  ) as needs_review
+  ) as needs_review,
+  b.has_purchase,
+  greatest(0, extract(day from now() - b.anchor_at)::int - coalesce(b.restock_cycle_days, 0)) as days_overdue
 from base b;

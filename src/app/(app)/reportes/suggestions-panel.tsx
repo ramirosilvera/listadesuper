@@ -43,7 +43,7 @@ const GROUP_META: Record<
 // vista product_suggestions), no un modelo entrenado: con el volumen de
 // datos de un solo hogar un modelo real sobreajustaría, y acá lo que
 // importa es que cada sugerencia se pueda justificar en una frase.
-// Fase 40: los ciclos también se infieren de las respuestas del Repaso de
+// Fase 42: los ciclos también se infieren de las respuestas del Repaso de
 // Stock (Stock > Repaso), no solo de los intervalos entre compras.
 export function SuggestionsPanel({
   suggestions: initial,

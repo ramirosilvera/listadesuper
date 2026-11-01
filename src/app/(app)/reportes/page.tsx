@@ -54,7 +54,7 @@ export default async function ReportesPage() {
       .order("suggestion_type", { ascending: true })
       .order("name", { ascending: true }),
     // Nombres de quienes integran el hogar (Fase 32) -- para mostrar "quién"
-    // registró cada compra en Historial y en el export JSON. Fase 37: antes
+    // registró cada compra en Historial y en el export JSON. Fase 39: antes
     // se pedía primero household_members y recién después profiles filtrado
     // por esos ids (dos etapas en serie). La policy RLS de profiles ya
     // limita el resultado a uno mismo + convivientes, así que se pide en

@@ -7,18 +7,19 @@ import { Button, Card, Input } from "@/components/ui";
 import {
   REVIEW_BATCH,
   REVIEW_COLUMNS,
+  REVIEW_ORDER,
   toReviewItems,
   type ReviewItem,
 } from "@/lib/stock-review";
 
-// Fase 38: repaso rápido de stock. El stock figura inflado porque se compra
+// Fase 40: repaso rápido de stock. El stock figura inflado porque se compra
 // mucho y casi no se carga el consumo; en vez de resetearlo solo (fabricaría
 // una cantidad que nadie vio), la vista product_stock_review marca qué
 // productos pasaron su ciclo sin una compra ni un conteo que los confirme, y
 // acá la persona los confirma con un toque. Cada respuesta se guarda con
 // reason='count' (no cuenta como consumo en las estadísticas).
 //
-// Fase 39 (auditoría): el conteo es ABSOLUTO y lo resuelve la base
+// Fase 41 (auditoría): el conteo es ABSOLUTO y lo resuelve la base
 // (set_stock_count) contra el stock real de ese instante. Antes el delta se
 // calculaba acá con la cantidad que tenía la pantalla al cargar, y si en el
 // medio alguien bajaba el stock desde Stock, "No queda" lo dejaba negativo.
@@ -153,7 +154,8 @@ export function RepasoTab({
       .select(REVIEW_COLUMNS, { count: "exact" })
       .eq("household_id", householdId)
       .eq("needs_review", true)
-      .order("overdue_ratio", { ascending: false })
+      .order(REVIEW_ORDER[0].column, { ascending: REVIEW_ORDER[0].ascending })
+      .order(REVIEW_ORDER[1].column, { ascending: REVIEW_ORDER[1].ascending })
       .limit(REVIEW_BATCH);
     setLoadingMore(false);
     if (qError) {
@@ -208,7 +210,7 @@ export function RepasoTab({
                   <>
                     {" "}
                     · sin confirmar hace {days} día{days === 1 ? "" : "s"}
-                    {item.effective_cycle_days != null && ` (ciclo ${item.effective_cycle_days})`}
+                    {item.restock_cycle_days != null && ` (ciclo ${item.restock_cycle_days})`}
                   </>
                 )}
               </div>
@@ -288,7 +290,7 @@ export function RepasoTab({
         </Button>
       )}
 
-      {/* Fase 40: lo que respondés acá no se pierde -- el módulo de
+      {/* Fase 42: lo que respondés acá no se pierde -- el módulo de
           Sugerencias lo usa para proponer alargar o acortar ciclos. */}
       {answered > 0 && (
         <p className="px-1 text-xs text-zinc-500 dark:text-zinc-400">

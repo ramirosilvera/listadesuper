@@ -1,4 +1,4 @@
--- Fase 40: las respuestas del repaso alimentan el módulo de Sugerencias.
+-- Fase 42: las respuestas del repaso alimentan el módulo de Sugerencias.
 --
 -- Se revisó el módulo existente (vista product_suggestions -> panel en
 -- Reportes -> apply/dismiss_product_suggestion -> aviso de "sin leer") y ya

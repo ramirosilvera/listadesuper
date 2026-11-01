@@ -1,6 +1,6 @@
--- Fase 39: auditoría del repaso de stock (/consejo).
+-- Fase 41: auditoría del repaso de stock (/consejo).
 --
--- Bug reproducido contra la base: el repaso (Fase 38) calculaba el delta en
+-- Bug reproducido contra la base: el repaso (Fase 40) calculaba el delta en
 -- el navegador con la cantidad que tenía al cargar la pantalla. Si en el
 -- medio alguien bajaba el stock desde Stock con el "-", "No queda" escribía
 -- un delta de más y el stock quedaba NEGATIVO (prueba: figuraba 2, se

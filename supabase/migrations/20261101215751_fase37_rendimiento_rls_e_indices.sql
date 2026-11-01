@@ -1,4 +1,4 @@
--- Fase 37: rendimiento (/consejo).
+-- Fase 39: rendimiento (/consejo).
 --
 -- Medido contra la base real: las vistas del motor (product_replenishment,
 -- product_suggestions) ejecutan en ~2-3 ms con 309 movimientos / 128

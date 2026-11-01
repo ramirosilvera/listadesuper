@@ -1,4 +1,4 @@
--- Fase 38: relevamiento asistido de stock (/consejo).
+-- Fase 40: relevamiento asistido de stock (/consejo).
 --
 -- Problema: se compra mucho y casi no se carga el consumo (127 compras
 -- contra 15 consumos en 6 semanas), asi que el stock figura inflado. Se

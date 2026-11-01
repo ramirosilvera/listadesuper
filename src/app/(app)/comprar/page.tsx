@@ -17,7 +17,7 @@ export default async function ComprarPage() {
     { data: replenishment },
     { data: categories },
   ] = await Promise.all([
-    // Fase 37: antes eran dos etapas en serie (primero las listas activas,
+    // Fase 39: antes eran dos etapas en serie (primero las listas activas,
     // después los ítems tildados de esas listas). El join !inner filtra por
     // la lista activa del hogar en la misma consulta -- mismo resultado,
     // una ida y vuelta menos.

@@ -38,7 +38,7 @@ export default async function ListaPage() {
 
   const supabase = await createClient();
 
-  // Fase 37: todo lo que no depende de la lista activa arranca YA, en
+  // Fase 39: todo lo que no depende de la lista activa arranca YA, en
   // paralelo con la búsqueda/creación de la lista (antes iba después, y los
   // nombres del hogar iban en una tercera etapa). Solo los ítems necesitan
   // el listId.

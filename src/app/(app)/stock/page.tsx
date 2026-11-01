@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getActiveHousehold } from "@/lib/household";
 import { createClient } from "@/lib/supabase/server";
-import { REVIEW_BATCH, toReviewItems } from "@/lib/stock-review";
+import { REVIEW_BATCH, REVIEW_COLUMNS, REVIEW_ORDER, toReviewItems } from "@/lib/stock-review";
 import { StockTabs } from "./stock-tabs";
 
 export default async function StockPage() {
@@ -53,21 +53,21 @@ export default async function StockPage() {
     // la alerta).
     supabase
       .from("product_replenishment")
-      .select("product_id, restock_reason, cycle_urgency, restock_snoozed_until, last_restocked_at")
+      .select(
+        "product_id, restock_reason, should_restock, cycle_urgency, restock_snoozed_until, last_restocked_at",
+      )
       .eq("household_id", household.id),
-    // Fase 38: productos con el stock sin confirmar hace más de un ciclo
+    // Fase 40: productos con el stock sin confirmar hace más de un ciclo
     // (vista product_stock_review). Va en la misma etapa que el resto, así
     // no suma una ida y vuelta de red; los más vencidos primero y con tope
     // para que el repaso no abrume.
     supabase
       .from("product_stock_review")
-      .select(
-        "product_id, name, unit_label, quantity_on_hand, effective_cycle_days, cycle_source, days_since_confirmed",
-        { count: "exact" },
-      )
+      .select(REVIEW_COLUMNS, { count: "exact" })
       .eq("household_id", household.id)
       .eq("needs_review", true)
-      .order("overdue_ratio", { ascending: false })
+      .order(REVIEW_ORDER[0].column, { ascending: REVIEW_ORDER[0].ascending })
+      .order(REVIEW_ORDER[1].column, { ascending: REVIEW_ORDER[1].ascending })
       .limit(REVIEW_BATCH),
   ]);
 
@@ -90,6 +90,13 @@ export default async function StockPage() {
           cycle_urgency: r.cycle_urgency,
           restock_snoozed_until: r.restock_snoozed_until,
           last_restocked_at: r.last_restocked_at,
+          // Fase 43: UN solo criterio de "poco stock" -- el mismo de los chips de
+          // Lista/Comprar (product_replenishment.should_restock). Acá viaja solo
+          // la parte automática (predicción o ciclo); el umbral y la marca manual
+          // se evalúan en vivo en el cliente para que el "−" avise al instante.
+          auto_restock:
+            r.should_restock === true &&
+            (r.restock_reason === "prediccion" || r.restock_reason === "ciclo_de_compra"),
         },
       ]),
   );
@@ -97,13 +104,14 @@ export default async function StockPage() {
   const rows = (products ?? []).map((p) => ({
     ...p,
     quantity_on_hand: stockByProduct.get(p.id) ?? 0,
-    // Fase 37: "Última compra" sale de la misma vista (max created_at con
+    // Fase 39: "Última compra" sale de la misma vista (max created_at con
     // reason='purchase', o sea solo compras REALES, no la carga inicial --
     // criterio de Fase 20) en vez de traer TODOS los movimientos de compra
     // del hogar y recorrerlos acá: era una consulta sin tope que crece con
     // el historial.
     last_restocked_at: replenishmentByProduct.get(p.id)?.last_restocked_at ?? null,
     cycle_urgency: replenishmentByProduct.get(p.id)?.cycle_urgency ?? null,
+    auto_restock: replenishmentByProduct.get(p.id)?.auto_restock ?? false,
     restock_snoozed_until: replenishmentByProduct.get(p.id)?.restock_snoozed_until ?? null,
   }));
 
